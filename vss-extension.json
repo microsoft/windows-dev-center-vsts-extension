@@ -20,6 +20,14 @@
     "icons": {
         "default": "images/logo.png"
     },
+    "content": {
+        "details": {
+            "path": "vsts-details.md"
+        }, 
+        "thirdpartynotice": {
+            "path": "ThirdPartyNotices.txt"
+        }
+    },
     "files": [
         {
             "path": "store-publish"

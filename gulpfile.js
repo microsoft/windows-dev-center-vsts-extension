@@ -23,6 +23,8 @@ gulp.task('task-metadata', function () {
         .src(['tasks/**/*.png'           // Task icons
             , 'tasks/**/task.json'       // Task manifest
             , 'tasks/**/node_modules/**' // Node modules used by the tasks
+            , 'ThirdPartyNotices.txt',
+            , 'vsts-details.md'
             ])
         .pipe(gulp.dest(BUILD_DIR));
 });
