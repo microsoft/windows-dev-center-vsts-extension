@@ -146,7 +146,7 @@ export function publishTask(params: PublishParams): void
                 tl.error(err);
                 tl.setResult(tl.TaskResult.Failed, JSON.stringify(err))
             }
-        );
+    );
 }
 
 /**
@@ -581,6 +581,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
     };
 
     console.log("Generating zip file");
+    
     var buffer = zip.generate(zipGenerationOptions)
     fs.writeFileSync(zipFilePath, buffer);
 
@@ -592,10 +593,18 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
     }
     var deferred = Q.defer<any>();
 
+    /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
+     * base64 parameter. There is no good way to fix this, because we don't really know how to
+     * distinguish between 'correct' uses of those characters, and their spurious instances in
+     * the base64 parameter. In our case, we just take the compromise of replacing every instance
+     * of '+' with its url-encoded counterpart. */
+    var dest = submissionResource.fileUploadUrl.replace(/\+/g, '%2B');
+    console.log(`Uploading to ${dest}`);
+
     /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
      * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the file is
      * piped from a stream to the put request. */
-    fs.createReadStream(zipFilePath).pipe(request.put(submissionResource.fileUploadUrl, requestParams, function (err, resp, body)
+    fs.createReadStream(zipFilePath).pipe(request.put(dest, requestParams, function (err, resp, body)
     {
         if (err)
         {
