@@ -1,0 +1,9 @@
+{
+  "globalDependencies": {
+    "form-data": "registry:dt/form-data#0.0.0+20160316155526",
+    "jszip": "registry:dt/jszip#0.0.0+20160709055933",
+    "node": "registry:dt/node#6.0.0+20160709114037",
+    "q": "registry:dt/q#0.0.0+20160613154756",
+    "request": "registry:dt/request#0.0.0+20160524135346"
+  }
+}

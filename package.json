@@ -1,0 +1,16 @@
+{
+  "name": "winstore-extension",
+  "version": "1.0.0",
+  "description": "Visual Studio Team Services (VSTS) extension for performing continuous delivery to the Windows Store from your automated CI builds.",
+  "author": "Microsoft",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-tsc": "^1.2.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "vsts-task-windows-store-publish",
+  "version": "1.0.0",
+  "description": "A VSTS release task for publishing an app to the Windows Store",
+  "author": "Microsoft",
+  "license": "MIT",
+  "dependencies": {
+    "jszip": "^2.6.1",
+    "q": "^1.4.1",
+    "request": "^2.72.0",
+    "vsts-task-lib": "^0.9.5"
+  }
+}

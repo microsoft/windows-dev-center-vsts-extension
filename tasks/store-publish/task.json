@@ -1,0 +1,130 @@
+﻿{
+    "id": "8e70da9d-532d-4416-a07f-5ec10f84339f",
+    "name": "store-publish",
+    "friendlyName": "Windows Store - Publish",
+    "description": "Publish your app to the Windows Store",
+    "author": "Microsoft Corporation",
+    "category": "Deploy",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "demands": [
+        "node.js"
+    ],
+    "version": {
+        "Major": "0",
+        "Minor": "6",
+        "Patch": "3"
+    },
+    "minimumAgentVersion": "1.83.0",
+    "instanceNameFormat": "Publish $(package)",
+    "inputs": [
+        {
+            "name": "authType",
+            "type": "pickList",
+            "label": "Authentication method",
+            "defaultValue": "ServiceEndpoint",
+            "options": {
+                "ServiceEndpoint": "Service endpoint",
+                "JsonFile": "JSON file"
+            }
+        },
+        {
+            "name": "serviceEndpoint",
+            "type": "connectedService:devCenter",
+            "label": "Service endpoint",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials",
+            "visibleRule": "authType = ServiceEndpoint"
+        },
+        {
+            "name": "jsonAuthPath",
+            "type": "filePath",
+            "label": "JSON Authentication path",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "JSON file containing an object specifying the URL, and tenant ID, client ID and client secret of the account to use for authentification",
+            "visibleRule": "authType = JsonFile"
+        },
+        {
+            "name": "nameType",
+            "type": "pickList",
+            "label": "App identification method",
+            "helpMarkDown": "How to determine the app to publish",
+            "defaultValue": "AppId",
+            "options": {
+                "AppId": "ID",
+                "AppName": "Primary name"
+            }
+        },
+        {
+            "name": "appId",
+            "type": "string",
+            "label": "Application ID",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the application, found in the URL for the application's page on the Dev Center",
+            "visibleRule": "nameType = AppId"
+        },
+        {
+            "name": "appName",
+            "type": "string",
+            "label": "Application primary name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Primary name of the application, found at the top of the application's page on the Dev Center",
+            "visibleRule": "nameType = AppName"
+        },
+        {
+            "name": "force",
+            "type": "boolean",
+            "label": "Delete pending submissions",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
+        },
+        {
+            "name": "metadataUpdateMethod",
+            "type": "pickList",
+            "label": "Metadata update method",
+            "defaultValue": "NoUpdate",
+            "options": {
+                "NoUpdate": "No update",
+                "JsonMetadata": "JSON-formatted metadata",
+                "TextMetadata":  "Text metadata"
+            }
+        },
+        {
+            "name": "metadataPath",
+            "type": "filePath",
+            "label": "Metadata file",
+            "defaultValue": "",
+            "helpMarkDown": "Path to a file containing the metadata to update, in JSON format",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod != NoUpdate"
+        },
+        {
+            "name": "packagePath",
+            "type": "filePath",
+            "label": "Package file",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Path to the application's package"
+        },
+        {
+            "name": "additionalPackages",
+            "type": "multiLine",
+            "label": "Additional package(s)",
+            "required": false,
+            "helpMarkDown": "Paths to any additional packages required by this application (one path per line)."
+        }
+    ],
+    "execution": {
+        "Node": {
+            "target": "publishUi.js",
+            "argumentFormat": ""
+        }
+    }
+}

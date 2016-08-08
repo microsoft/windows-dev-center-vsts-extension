@@ -1,0 +1,110 @@
+﻿{
+    "manifestVersion": 1,
+    "id": "windows-store-publish-test",
+    "version": "0.7.4",
+    "name": "Windows Store",
+    "publisher": "ms-rdx-mro",
+    "description": "Publish your applications on the Windows Store.",
+    "categories": [
+        "Build and release"
+    ],
+    "public": false,
+     "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services.Cloud"
+        }
+    ],
+    "scopes": [
+        "vso.build_execute"
+    ],
+    "icons": {
+        "default": "images/logo.png"
+    },
+    "files": [
+        {
+            "path": "store-publish"
+        },
+        {
+            "path": "images/logo.png",
+            "addressable": true
+        }
+    ],
+    "contributions": [
+        {
+            "id": "devCenterApiEndpoint",
+            "description": "DevCenterEndpoint",
+            "type": "ms.vss-endpoint.service-endpoint-type",
+            "targets": [
+                "ms.vss-endpoint.endpoint-types"
+            ],
+            "properties": {
+                "name": "devCenter",
+                "displayName": "Windows Dev Center",
+                "url":  "https://manage.devcenter.microsoft.com",
+                "inputDescriptors": [],
+                "authenticationSchemes": [
+                    {
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-service-principal",
+                        "inputDescriptors": [
+                            {
+                                "id": "url",
+                                "name": "Server URL",
+                                "description":  "Server URL",
+                                "inputMode": "textbox",
+                                "defaultValue":  "https://manage.devcenter.microsoft.com",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "tenantId",
+                                "name": "Azure tenant ID",
+                                "description": "ID of the Azure tenant",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "servicePrincipalId",
+                                "name": "Client ID",
+                                "description": "ID of the client",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            },
+                            {
+                                "id": "servicePrincipalKey",
+                                "name": "Client secret",
+                                "description": "Secret of the client",
+                                "inputMode": "passwordbox",
+                                "isConfidential": true,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "publish-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "store-publish"
+            }
+        }
+    ]
+}
