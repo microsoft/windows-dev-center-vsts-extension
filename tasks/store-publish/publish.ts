@@ -14,7 +14,6 @@ import fs = require('fs');
 import path = require('path');
 import os = require('os');
 
-import request = require('request');
 import JSZip = require('jszip');
 import Q = require('q');
 import request = require('request');
