@@ -1,11 +1,14 @@
+var exec = require('child_process').exec;
+
+var argv = require('yargs').argv;
 var gulp = require('gulp');
 var tsc = require('gulp-tsc');
-var exec = require('child_process').exec;
+
 
 var EXTENSION_MANIFEST = 'vss-extension.json';
 var BUILD_DIR = 'build/';
 
-gulp.task('compile', function () {
+gulp.task('compile', ['task-dependencies'], function () {
     var tsconfig = {
         target: 'ES6',
         module: 'commonjs'
@@ -20,31 +23,40 @@ gulp.task('compile', function () {
 gulp.task('task-metadata', function () {
     return gulp
         // Copy over non-code files of the extension
-        .src(['tasks/**/*.png'           // Task icons
-            , 'tasks/**/task.json'       // Task manifest
-            , 'tasks/**/node_modules/**' // Node modules used by the tasks
-            , 'ThirdPartyNotices.txt',
-            , 'vsts-details.md'
+        .src(['tasks/**/*.png'          // Task icons
+            , 'tasks/**/task.json'      // Task manifest
+            , 'tasks/**/node_modules/*' // Dependencies
             ])
         .pipe(gulp.dest(BUILD_DIR));
 });
 
 gulp.task('extension-metadata', function() {
     return gulp
-        .src([EXTENSION_MANIFEST, 'images/*.png'],
-                { base: '.'})
+        .src([EXTENSION_MANIFEST
+            , 'images/*.png'            // Extension logo
+            , 'ThirdPartyNotices.txt'   // 3rd-party notices
+            , 'vsts-details.md'         // Information to appear on the marketplace page
+            ],
+            { base: '.'})
         .pipe(gulp.dest(BUILD_DIR));
 })
 
-gulp.task('package', ['compile', 'task-metadata', 'extension-metadata'], function (callback) {
+gulp.task('task-dependencies', ['task-metadata'], function (callback) {
+    exec('npm install', { cwd: 'tasks/store-publish/' }, callback);
+});
+
+gulp.task('package', ['compile', 'task-metadata', 'extension-metadata', 'task-dependencies'], function (callback) {
     var cmd = 'tfx extension create'
                 + ' --root ' + BUILD_DIR 
                 + ' --manifest-globs ' + EXTENSION_MANIFEST
                 + ' --output-path ' + BUILD_DIR + 'extension';
     
-    exec(cmd, function (err) {
-        callback(err);
-    });
+    if (argv.publisher)
+    {
+        cmd += ' --publisher ' + argv.publisher;
+    }
+
+    exec(cmd, callback);
 });
 
 

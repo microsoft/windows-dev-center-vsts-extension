@@ -11,6 +11,8 @@
   "dependencies": {},
   "devDependencies": {
     "gulp": "^3.9.1",
-    "gulp-tsc": "^1.2.0"
+    "gulp-tsc": "^1.2.0",
+    "shelljs": "^0.7.3",
+    "yargs": "^4.8.1"
   }
 }
