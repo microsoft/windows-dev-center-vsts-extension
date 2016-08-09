@@ -80,7 +80,7 @@ function gatherParams()
 
     // Packages
     var packages: string[] = [];
-    packages.push(getPathInputAsFile('packagePath', true));
+    packages.push(getPathInputAsFile('packagePath', false));
     packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
     taskParams.packages = packages;
 

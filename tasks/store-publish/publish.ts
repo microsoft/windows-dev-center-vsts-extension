@@ -6,7 +6,7 @@
 /// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/jszip/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
-/// <reference path="node_modules/vsts-task-lib/task.d.ts" />
+/// <reference path="./node_modules/vsts-task-lib/task.d.ts" />
 
 import api = require('./apiWrapper');
 
@@ -17,7 +17,7 @@ import os = require('os');
 import JSZip = require('jszip');
 import Q = require('q');
 import request = require('request');
-import tl = require('vsts-task-lib/task');
+import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
 export enum MetadataUpdateType
@@ -563,15 +563,21 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
  * @param submissionResource
  * @return Promises back the submission resource.
  */
-function uploadZip(submissionResource: any, zipFilePath: string): any
+function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
 {
     console.log(`Creating zip file into ${zipFilePath}`);
 
     var zip = new JSZip();
+    var hasFiles = false;
     console.log("Adding packages to zip");
-    addPackagesToZip(zip);
+    hasFiles = addPackagesToZip(zip);
     console.log("Adding images to zip");
-    addImagesToZip(submissionResource, zip);
+    hasFiles = hasFiles || addImagesToZip(submissionResource, zip);
+
+    if (!hasFiles)
+    {
+        return Q.fcall(() => submissionResource);
+    }
 
     var zipGenerationOptions = {
         base64: false,
@@ -581,7 +587,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
     };
 
     console.log("Generating zip file");
-    
+
     var buffer = zip.generate(zipGenerationOptions)
     fs.writeFileSync(zipFilePath, buffer);
 
@@ -626,8 +632,9 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
 /**
  * Add the packages given as parameters to the task to the given zip file.
  * @param zip
+ * @return Whether some packages were added to the zip file.
  */
-function addPackagesToZip(zip: JSZip): void
+function addPackagesToZip(zip: JSZip): boolean
 {
     var currentFiles = {};
 
@@ -646,41 +653,48 @@ function addPackagesToZip(zip: JSZip): void
             zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
         }
     });
+
+    return taskParams.packages.length > 0;
 }
 
 /**
  * Add any PendingUpload images in the given submission resource to the given zip file.
  */
-function addImagesToZip(submissionResource: any, zip: JSZip): void
+function addImagesToZip(submissionResource: any, zip: JSZip): boolean
 {
+    var hasAddedImages = false;
     for (var listingKey in submissionResource.listings)
     {
         console.log(`Adding images for listing ${listingKey}`);
         var listing = submissionResource.listings[listingKey];
-        addImagesToZipFromListing(listing.baseListing.images, zip);
+        hasAddedImages = hasAddedImages || addImagesToZipFromListing(listing.baseListing.images, zip);
 
         for (var platOverrideKey in listing.platformOverrides)
         {
             console.log(`Adding images for platform override ${platOverrideKey}`);
             var platOverride = listing.platformOverrides[platOverrideKey];
-            addImagesToZipFromListing(platOverride.images, zip);
+            hasAddedImages = hasAddedImages || addImagesToZipFromListing(platOverride.images, zip);
         }
     }
+
+    return hasAddedImages;
 }
 
-function addImagesToZipFromListing(images: any[], zip: JSZip): void
+function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
 {
-    for (var i = 0; i < images.length; i++)
+    var hasAddedImages = false;
+    images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
     {
-        if (images[i].fileStatus == 'PendingUpload')
-        {
-            var imgPath = path.join(taskParams.metadataRoot, images[i].fileName);
-            // According to JSZip documentation, the directory separator used is a forward slash.
-            var filenameInZip = images[i].fileName.replace('\\', '/');
-            console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
-            zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
-        }
-    }
+        hasAddedImages = true;
+
+        var imgPath = path.join(taskParams.metadataRoot, image.fileName);
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var filenameInZip = image.fileName.replace('\\', '/');
+        console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
+        zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
+    });
+
+    return hasAddedImages;
 }
 
 
