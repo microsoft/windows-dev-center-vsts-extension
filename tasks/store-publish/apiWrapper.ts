@@ -97,7 +97,9 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
     request(options, function (error, response, body)
     {
         // For convenience, parse the body if it's JSON.
-        if (response.headers['content-type'].indexOf('application/json') != -1)
+        if (response.headers['content-type'] !== undefined &&   // content-type is undefined if there is no content
+            response.headers['content-type'].indexOf('application/json') != -1 &&
+            typeof body == 'string') // body might be an object if the options given to request already parsed it for us
         {
             body = JSON.parse(body);
             logErrorsAndWarnings(body);
