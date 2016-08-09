@@ -9,10 +9,7 @@ var EXTENSION_MANIFEST = 'vss-extension.json';
 var BUILD_DIR = 'build/';
 
 gulp.task('compile', ['task-dependencies'], function () {
-    var tsconfig = {
-        target: 'ES6',
-        module: 'commonjs'
-    };
+    var tsconfig = require('./tsconfig.json').compilerOptions;
     
     return gulp
         .src(['tasks/**/*.ts'])
