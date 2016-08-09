@@ -2,11 +2,13 @@
  * Entry point for the Publish task. Gathers parameters and performs validation.
  */
 
-import tl = require('vsts-task-lib/task');
 import api = require('./apiWrapper');
 import pub = require('./publish');
+
 import fs = require('fs');
 import path = require('path');
+
+import tl = require('vsts-task-lib');
 
 /**
  * Gets the value of a path input, and additionally checks that the path is a file. The task
@@ -73,14 +75,14 @@ function gatherParams()
         authentication : credentials,
         endpoint : endpointUrl,
         force : tl.getBoolInput('force', true),
-        metadataUpdateType : pub.MetadataUpdateType[tl.getInput('metadataUpdateMethod', true)],
+        metadataUpdateType : pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : []
     };
 
     // Packages
     var packages: string[] = [];
-    packages.push(getPathInputAsFile('packagePath', true));
+    packages.push(getPathInputAsFile('packagePath', false));
     packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
     taskParams.packages = packages;
 

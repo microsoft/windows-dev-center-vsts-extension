@@ -6,8 +6,8 @@
 /// <reference path="../../typings/globals/request/index.d.ts" />
 /// <reference path="../../typings/globals/q/index.d.ts" />
 
-import request = require('request');
 import Q = require('q');
+import request = require('request');
 
 export var VERBOSE = false;
 
