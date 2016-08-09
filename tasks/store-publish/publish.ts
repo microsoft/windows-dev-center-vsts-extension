@@ -577,7 +577,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
     console.log('Adding packages to zip');
     hasFiles = addPackagesToZip(zip);
     console.log('Adding images to zip');
-    hasFiles = hasFiles || addImagesToZip(submissionResource, zip);
+    hasFiles = addImagesToZip(submissionResource, zip) || hasFiles;
 
     if (!hasFiles)
     {
@@ -670,13 +670,13 @@ function addImagesToZip(submissionResource: any, zip: JSZip): boolean
     {
         console.log(`Adding images for listing ${listingKey}`);
         var listing = submissionResource.listings[listingKey];
-        hasAddedImages = hasAddedImages || addImagesToZipFromListing(listing.baseListing.images, zip);
+        hasAddedImages = addImagesToZipFromListing(listing.baseListing.images, zip) || hasAddedImages;
 
         for (var platOverrideKey in listing.platformOverrides)
         {
             console.log(`Adding images for platform override ${platOverrideKey}`);
             var platOverride = listing.platformOverrides[platOverrideKey];
-            hasAddedImages = hasAddedImages || addImagesToZipFromListing(platOverride.images, zip);
+            hasAddedImages = addImagesToZipFromListing(platOverride.images, zip) || hasAddedImages;
         }
     }
 
