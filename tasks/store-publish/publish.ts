@@ -688,21 +688,6 @@ function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
     var hasAddedImages = false;
     images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
     {
-<<<<<<< HEAD
-        if (images[i].fileStatus == 'PendingUpload')
-        {
-            var imgPath = path.join(taskParams.metadataRoot, images[i].fileName);
-            // According to JSZip documentation, the directory separator used is a forward slash.
-            var filenameInZip = images[i].fileName.replace('\\', '/');
-            console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
-            zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
-        }
-        else
-        {
-            console.log(`Skipping file ${images[i].fileName} with status ${images[i].fileStatus}`);
-        }
-    }
-=======
         hasAddedImages = true;
 
         var imgPath = path.join(taskParams.metadataRoot, image.fileName);
@@ -713,7 +698,6 @@ function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
     });
 
     return hasAddedImages;
->>>>>>> 0b383d0161960b4598fe348acd8203901bfa6b3a
 }
 
 
