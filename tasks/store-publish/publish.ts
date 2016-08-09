@@ -282,6 +282,7 @@ function putMetadata(submissionResource: any): Q.Promise<any>
     }
 
     // Also at this point add the given packages to the list of packages to upload.
+    console.log(`Adding ${taskParams.packages.length} package(s)`);
     taskParams.packages.map(makePackageEntry).forEach(packEntry =>
     {
         var entry = {
@@ -299,6 +300,7 @@ function putMetadata(submissionResource: any): Q.Promise<any>
         body: submissionResource
     };
 
+    console.log('Updating submission in the server');
     return api.performAuthenticatedRequest<any>(currentToken, requestParams).thenResolve(submissionResource);
 }
 
@@ -309,6 +311,7 @@ function putMetadata(submissionResource: any): Q.Promise<any>
 
 function updateMetadata(submissionResource: any): void
 {
+    console.log(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
     // Update metadata for listings
     var listingPaths = fs.readdirSync(taskParams.metadataRoot);
     for (var i = 0; i < listingPaths.length; i++)
@@ -357,6 +360,8 @@ function updateMetadata(submissionResource: any): void
             updateImageMetadata(platOverrideRef.images, platPath);
         }
     }
+
+    console.log('Finished updating metadata');
 }
 
 /**
@@ -367,18 +372,18 @@ function updateMetadata(submissionResource: any): void
 function makeListing(listingAbsPath: string, languageJsonObj: any): any
 {
     // Obtain base listing
-    console.log("Obtaining base listings metadata...");
+    console.log('Obtaining base listings metadata...');
     var baseListing = getListingAttributes(path.join(listingAbsPath, 'baseListing'), languageJsonObj.baseListing);
-    console.log("Done!");
+    console.log('Done!');
 
     // Check if we have platform overrides
-    console.log("Verifying platform overrides directory...");
+    console.log('Verifying platform overrides directory...');
     var platformOverrides = {};
     var overridesPath = path.join(listingAbsPath, 'platformOverrides');
     console.log(`Looking for directory ${overridesPath}`)
     if (existsAndIsDir(overridesPath))
     {
-        console.log("Found platform overrides directory. Analyzing...");
+        console.log('Found platform overrides directory. Analyzing...');
         // If we do, consider each directory in the platformOverrides directory as a platform.
         var allOverrideDirs = fs.readdirSync(overridesPath).filter((x) =>
             { try {fs.statSync(path.join(overridesPath, x)).isDirectory()} catch (e) { return false;} });
@@ -388,12 +393,12 @@ function makeListing(listingAbsPath: string, languageJsonObj: any): any
             console.log(`Obtaining listing metadata from folder ${overridePath}`);
             platformOverrides[allOverrideDirs[i]] = getListingAttributes(overridePath, languageJsonObj.platformOverrides);
         }
-        console.log("Done!");
+        console.log('Done!');
     }
     else
     {
         // Avoid creating an attribute for platform overrides if they're not there
-        console.log("No platform overrides folder found.");
+        console.log('No platform overrides folder found.');
         platformOverrides = undefined;
     }
 
@@ -449,7 +454,7 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
             console.log(`Working with file ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
-            console.log(`Assigning contents <${contents}> to property ${prop}`);
+            console.log(`Assigning contents to property`);
             listing[prop] = STRING_ARRAY_ATTRIBUTES[prop.toLowerCase()] ? splitAnyNewline(contents) : contents;
         }
     }
@@ -481,7 +486,7 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
         for (var i = 0; i < imageTypeDirs.length; i++)
         {
             var imageTypeAbs = path.join(imagesAbsPath, imageTypeDirs[i]);
-            console.log(`Reding images from ${imageTypeAbs}`);
+            console.log(`Reading images from ${imageTypeAbs}`);
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
@@ -568,9 +573,9 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
     console.log(`Creating zip file into ${zipFilePath}`);
 
     var zip = new JSZip();
-    console.log("Adding packages to zip");
+    console.log('Adding packages to zip');
     addPackagesToZip(zip);
-    console.log("Adding images to zip");
+    console.log('Adding images to zip');
     addImagesToZip(submissionResource, zip);
 
     var zipGenerationOptions = {
@@ -580,7 +585,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): any
         streamFiles: true
     };
 
-    console.log("Generating zip file");
+    console.log('Generating zip file');
     var buffer = zip.generate(zipGenerationOptions)
     fs.writeFileSync(zipFilePath, buffer);
 
@@ -627,7 +632,6 @@ function addPackagesToZip(zip: JSZip): void
         if (!existsAndIsFile(aPath))
         {
             tl.warning('Supplied package ' + aPath + ' does not exist or is not a file. Skipping...');
-            console.log('Supplied package ' + aPath + ' does not exist or is not a file. Skipping...');
         }
         else
         {
@@ -670,6 +674,10 @@ function addImagesToZipFromListing(images: any[], zip: JSZip): void
             var filenameInZip = images[i].fileName.replace('\\', '/');
             console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
             zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
+        }
+        else
+        {
+            console.log(`Skipping file ${images[i].fileName} with status ${images[i].fileStatus}`);
         }
     }
 }
