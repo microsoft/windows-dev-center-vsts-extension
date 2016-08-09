@@ -6,10 +6,10 @@
 /// <reference path="../../typings/globals/request/index.d.ts" />
 /// <reference path="../../typings/globals/q/index.d.ts" />
 
+import http = require('http'); // Only used for types
+
 import Q = require('q');
 import request = require('request');
-
-export var VERBOSE = false;
 
 /** How long to wait between retries. */
 const RETRY_DELAY = 5000;
@@ -48,64 +48,78 @@ function isExpired(token: AccessToken): boolean
     return (Date.now() / 1000) + 5 > token.expiration;
 }
 
-/** 
- * A callback that expects a non-error response body and a deferred.
- * It should decide whether to resolve or reject the deferred promise
- * based on the body. */
-export interface apiSuccessCallback<T>
+/** All the information given to us by the request module along a response. */
+export class ResponseInformation
 {
-    (body: any, deferred: Q.Deferred<T>): void
+    error: any;
+    response: http.IncomingMessage;
+    body: any;
+
+    // For friendly logging
+    toString(): string
+    {
+        var preamble = 'Status';
+
+        if (this.error !== undefined)
+        {
+            preamble = 'Error';
+        }
+
+        var bodyToPrint = this.body;
+        if (typeof bodyToPrint != 'string')
+        {
+            bodyToPrint = JSON.stringify(bodyToPrint);
+        }
+
+        return `${preamble} ${this.response.statusCode}: ${bodyToPrint}`;
+    }
 }
 
 /**
- * Perform an API request. Provides some default error handling by rejecting its
-   promise if an error in the API call occurs, or the status code returned is an error code.
+ * Perform a request with some default handling.
+ *
+ * For convenience, parses the body if the content-type is 'application/json'.
+ * Further, examines the body and logs any errors or warnings.
+ *
+ * If an transport or application level error occurs, rejects the returned promise.
+ * The reason given is an instance of @ResponseInformation@, containing the error
+ * object, the response and the body.
+ *
+ * If no error occurs, resolves the returned promise with the body.
+ *
  * @param options Options describing the request to execute.
- * @param callback If present, decides whether to resolve or reject the promise based on the reponse body.
- * If it is not present, the promise will be resolved with the body of the response.
  */
-export function performRequest<T>(
-        options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-        callback?: apiSuccessCallback<T>):
+export function performRequest<T>(options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
     Q.Promise<T>
 {
     var deferred = Q.defer<T>();
-    //VERBOSE = true;
-    if (VERBOSE)
+    
+    request(options, function (error, response, body)
     {
-        console.log("Performing request:\n" + JSON.stringify(options));
-    }
+        // For convenience, parse the body if it's JSON.
+        if (response.headers['content-type'].indexOf('application/json') != -1)
+        {
+            body = JSON.parse(body);
+            logErrorsAndWarnings(body);
+        }
 
-    request(options, function (err, resp, body)
-    {
+        var respInfo: ResponseInformation = {
+            error: error,
+            response: response,
+            body: body
+        }
 
-        if (VERBOSE)
+        if (error) // A transport-level error occurred (i.e. the request could not be completed)
         {
-            console.log('Completed with status ' + resp.statusCode);
-            if (typeof body == 'string')
-            {
-                console.log('Body: ' + body + '\n\n');
-            }
-            else
-            {
-                console.log('Body: ' + JSON.stringify(body) + '\n\n');
-            }
+            console.log('Error: ' + error);
+            deferred.reject(respInfo);
         }
-        if (err) // A transport-level error occurred (i.e. the request could not be completed)
+        else if (response.statusCode >= 400) // An application-level error occurred (i.e. the request was completed, but could not be fulfilled)
         {
-            console.log('Error: ' + err);
-            deferred.reject(err);
+            console.log('Error ' + response.statusCode)
+            deferred.reject(respInfo);
         }
-        else if (resp.statusCode >= 400) // An application-level error occurred (i.e. the request was completed, but could not be fulfilled)
-        {
-            console.log('Error ' + resp.statusCode)
-            deferred.reject(body);
-        }
-        else if (callback) // If a callback was provided, defer to it the decision of rejecting or resolving.
-        {
-            callback(body, deferred);
-        }
-        else // If no callback was provided, resolve with the body
+        else
         {
             deferred.resolve(body);
         }
@@ -119,9 +133,8 @@ export function performRequest<T>(
  * @param auth A token used to identify with the resource. If expired, it will be renewed before executing the request.
  */
 export function performAuthenticatedRequest<T>(
-        auth: AccessToken,
-        options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-        callback?: apiSuccessCallback<T>):
+    auth: AccessToken,
+    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
     Q.Promise<T>
 {
     // The expiration check is a function that returns a promise
@@ -157,7 +170,7 @@ export function performAuthenticatedRequest<T>(
                 options.headers['Authorization'] = 'Bearer ' + auth.token;
             }
 
-            return performRequest<T>(options, callback);
+            return performRequest<T>(options);
         });
 }
 
@@ -183,17 +196,16 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
         form: requestParams
     };
 
-    return performRequest<AccessToken>(options, function (body, deferred)
+    return performRequest<any>(options).then<AccessToken>(body =>
     {
-        var content = JSON.parse(body);
         var tok: AccessToken = {
             resource: resource,
             credentials: credentials,
-            expiration: content.expires_on,
-            token: content.access_token
+            expiration: body.expires_on,
+            token: body.access_token
         };
 
-        deferred.resolve(tok);
+        return tok;
     });
 }
 
@@ -219,4 +231,25 @@ export function withRetry<T>(
             throw err;
         }
     });
+}
+
+/** 
+ * Examines a response body and logs errors and warnings.
+ * @param body A body in the format given by the Store API
+ * (Where body.errors and body.warnings are arrays of objects
+ * containing a 'code' and 'details' attribute).
+ */
+function logErrorsAndWarnings(body: any)
+{
+    if (body.errors !== undefined && body.errors.length > 0)
+    {
+        console.error('Errors occurred in request');
+        (<any[]>body.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
+    }
+
+    if (body.warnings !== undefined && body.warnings.length > 0)
+    {
+        console.warn('Warnings occurred in request');
+        (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+    }
 }
