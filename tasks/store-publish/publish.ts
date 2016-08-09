@@ -158,16 +158,19 @@ function getAppResource(): Q.Promise<any>
     console.log('Getting app information...');
     if (hasAppId(taskParams))
     {
+        // If we have an app ID then we can directly obtain its information
+        tl.debug(`Getting app information (by app ID) for ${taskParams.appId}`);
         var requestParams = {
             url: ROOT + 'applications/' + taskParams.appId,
             method: 'GET'
         };
 
-        return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(JSON.parse);
+        return api.performAuthenticatedRequest<any>(currentToken, requestParams);
     }
     else 
     {
         // Otherwise go look for it through the pages of apps, using the primary name we got.
+        tl.debug(`Getting app information (by app name) for ${taskParams.appName}`);
         return getAppResourceFromName(taskParams.appName);
     }
 }
@@ -185,46 +188,28 @@ function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.P
         currentPage = 'applications';
     }
 
-    console.log('\tSearching for app on ' + currentPage);
+    tl.debug(`\tSearching for app ${givenAppName} on ${currentPage}`);
 
     var requestParams = {
         url: ROOT + currentPage,
         method: 'GET'
     };
 
-    return api.performAuthenticatedRequest<string>(currentToken, requestParams, function (body, deferred)
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(body =>
     {
-        var jbody = JSON.parse(body);
-        var foundAppResource = undefined;
-
-        // Check through the apps returned in this page.
-        for (var i = 0 ; i < jbody.value.length ; i++)
-        {
-            if (jbody.value[i].primaryName == givenAppName)
-            {
-                foundAppResource = jbody.value[i];
-                break;
-            }
-        }
-
+        var foundAppResource = (<any[]>body.value).find(x => x.primaryName == givenAppName);
         if (foundAppResource)
         {
-            deferred.resolve(foundAppResource);
+            tl.debug('App found');
+            return foundAppResource;
         }
-        else
+
+        if (body['@nextLink'] === undefined)
         {
-            /* If we didn't find the object, try with the next page and hope we can
-               fulfill the current promise that way. If there is no next page, reject
-               the promise. */
-            if (jbody['@nextLink'] === undefined)
-            {
-                deferred.reject(new Error('No application with name "' + givenAppName + '" was found'));
-            }
-            else
-            {
-                getAppResourceFromName(givenAppName, jbody['@nextLink']).then(res => deferred.resolve(res)).done();
-            }
+            throw new Error(`No application with name "${givenAppName}" was found`);
         }
+
+        return getAppResourceFromName(givenAppName, body['@nextLink']);
     });
 }
 
@@ -261,7 +246,7 @@ function createSubmission(): Q.Promise<any>
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(JSON.parse);
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams);
 }
 
 /**
@@ -454,7 +439,6 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
             console.log(`Working with file ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
-            console.log(`Assigning contents to property`);
             listing[prop] = STRING_ARRAY_ATTRIBUTES[prop.toLowerCase()] ? splitAnyNewline(contents) : contents;
         }
     }
@@ -486,7 +470,6 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
         for (var i = 0; i < imageTypeDirs.length; i++)
         {
             var imageTypeAbs = path.join(imagesAbsPath, imageTypeDirs[i]);
-            console.log(`Reading images from ${imageTypeAbs}`);
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
@@ -574,6 +557,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
 
     var zip = new JSZip();
     var hasFiles = false;
+
     console.log('Adding packages to zip');
     hasFiles = addPackagesToZip(zip);
     console.log('Adding images to zip');
@@ -591,7 +575,6 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
         streamFiles: true
     };
 
-    console.log('Generating zip file');
     var buffer = zip.generate(zipGenerationOptions)
     fs.writeFileSync(zipFilePath, buffer);
 
@@ -713,35 +696,7 @@ function commit(submissionResource: any): any
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams, function (body, deferred)
-    {
-        var jbody = JSON.parse(body);
-        if (jbody.errors !== undefined && jbody.errors.length > 0)
-        {
-            var errs = 'Errors occurred when committing:';
-            for (var i = 0; i < jbody.errors.length; i++)
-            {
-                errs += '\n\t[' + jbody.errors[i].code + '] ' + jbody.errors[i].details;
-            }
-
-            deferred.reject(new Error(errs));
-        }
-        else
-        {
-            if (jbody.warnings !== undefined && jbody.warnings.length > 0)
-            {
-                var warns = 'Warnings occurred when committing:';
-                for (var i = 0; i < jbody.warnings.length; i++)
-                {
-                    warns += '\n\t[' + jbody.warnings[i].code + '] ' + jbody.warnings[i].details;
-                }
-
-                tl.warning(warns);
-            }
-
-            deferred.resolve(submissionResource);
-        }
-    });
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams).thenResolve(submissionResource);
 }
 
 /**
@@ -760,15 +715,14 @@ function pollStatus(submissionResource: any): Q.Promise<void>
     var requestPromise = api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
     {
         /* Once the previous request has finished, examine the body to tell if we should start a new one. */
-        var jbody = JSON.parse(body);
-        if (!jbody.status.endsWith('Failed'))
+        if (!body.status.endsWith('Failed'))
         {
-            console.log(statusMsg + jbody.status);
+            tl.debug(statusMsg + body.status);
 
             /* In immediate mode, we expect to get all the way to "Published" status.
              * In other modes, we stop at "Release" status. */
-            if (    jbody.status == 'Published'
-                || (jbody.status == 'Release' && jbody.targetPublishMode != 'Immediate'))
+            if (    body.status == 'Published'
+                || (body.status == 'Release' && body.targetPublishMode != 'Immediate'))
             {
                 // Note that the fulfillment handler can either return a promise to a value (as below)
                 // or a value itself (as here).
@@ -782,11 +736,11 @@ function pollStatus(submissionResource: any): Q.Promise<void>
         }
         else
         {
-            tl.error(statusMsg + ' failed with ' + jbody.status);
+            tl.error(statusMsg + ' failed with ' + body.status);
             tl.error('Reported errors: ');
-            for (var i = 0; i < jbody.statusDetails.errors.length; i++)
+            for (var i = 0; i < body.statusDetails.errors.length; i++)
             {
-                var errDetail = jbody.statusDetails.errors[i];
+                var errDetail = body.statusDetails.errors[i];
                 tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
             }
             throw new Error('Commit failed');
