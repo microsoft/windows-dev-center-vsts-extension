@@ -129,15 +129,19 @@ function canonicalizePath(aPath: string): string
     return path.normalize(path.format(pathObj));
 }
 
-/** try...catch will handle sync exceptions that could happen. */
-try
+async function main()
 {
-    console.log('Windows Store Publish');
-    var taskParams: pub.PublishParams = gatherParams();
-    pub.publishTask(taskParams);
+    try
+    {
+        var taskParams: pub.PublishParams = gatherParams();
+        await pub.publishTask(taskParams);
+    }
+    catch (err)
+    {
+        tl.error(err);
+        tl.error(err.stack);
+        tl.setResult(tl.TaskResult.Failed, err);
+    }
 }
-catch (err)
-{
-    tl.error(err);
-    tl.setResult(tl.TaskResult.Failed, err);
-}
+
+main();
