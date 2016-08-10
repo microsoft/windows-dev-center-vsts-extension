@@ -82,12 +82,6 @@ export type ParamsWithAppId = AppIdParam & CorePublishParams;
 export type ParamsWithAppName = AppNameParam & CorePublishParams;
 export type PublishParams = ParamsWithAppId | ParamsWithAppName;
 
-interface FileEntryDict
-{
-    // Dictionary of strings to pairs of object arrays and numbers
-    [filePath: string]: { arr: any[], i: number }
-}
-
 /**
  * Type guard: indicates whether these parameters contain an App Id or not.
  */
@@ -111,6 +105,12 @@ const STRING_ARRAY_ATTRIBUTES =
     };
 
 /**
+ * A little part of the URL to the API that contains a version number.
+ * This may need to be updated in the future to comply with the API.
+ */
+const API_URL_VERSION_PART = 'v1.0/my/';
+
+/**
  * The parameters given to the task. They're declared here to be
  * available to every step of the task without explicitly threading them through.
  */
@@ -128,7 +128,11 @@ var appId: string;
 export async function publishTask(params: PublishParams)
 {
     taskParams = params;
-    ROOT = taskParams.endpoint + 'v1.0/my/';
+
+    /* We expect the endpoint part of this to have a slash at the end.
+     * This is because authenticating to 'endpoint' will give us an
+     * invalid token, while authenticating to 'endpoint/' will work */
+    ROOT = taskParams.endpoint + API_URL_VERSION_PART;
 
     currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
 
@@ -177,7 +181,8 @@ function getAppResource(): Q.Promise<any>
 }
 
 /**
- * Tries to obtain an app resource from an app name.
+ * Tries to obtain an app resource from the primary name of an app.
+ * This will only work with the primary name.
  * @param givenAppName The app name for which we want to find the resource.
  * @param currentPage Bookkeeping parameter to indicate at which point of the search we are.
  *   This should not be given by the caller.
@@ -201,7 +206,7 @@ function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.P
         var foundAppResource = (<any[]>body.value).find(x => x.primaryName == givenAppName);
         if (foundAppResource)
         {
-            tl.debug('App found');
+            tl.debug(`App found with ${foundAppResource.id}`);
             return foundAppResource;
         }
 
@@ -252,7 +257,7 @@ function createSubmission(): Q.Promise<any>
  */
 function putMetadata(submissionResource: any): Q.Promise<void>
 {
-    console.log('Adding submission metadata...');
+    tl.debug(`Adding metadata for new submission ${submissionResource.id}`);
 
     if (taskParams.metadataUpdateType != MetadataUpdateType.NoUpdate &&
         taskParams.metadataRoot)
@@ -261,7 +266,7 @@ function putMetadata(submissionResource: any): Q.Promise<void>
     }
 
     // Also at this point add the given packages to the list of packages to upload.
-    console.log(`Adding ${taskParams.packages.length} package(s)`);
+    tl.debug(`Adding ${taskParams.packages.length} package(s)`);
     taskParams.packages.map(makePackageEntry).forEach(packEntry =>
     {
         var entry = {
@@ -279,39 +284,60 @@ function putMetadata(submissionResource: any): Q.Promise<void>
         body: submissionResource
     };
 
-    console.log('Updating submission in the server');
+    tl.debug(`Performing metadata update`);
     return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
 /**
- * Updates the metadata information given in the metadata root
- * @param submissionResource
+ * Updates the metadata information given in the metadata root.
+ * The expected format is as follows:
+ *
+ *  <metadata root>
+ *  |
+ *  +-- <locale> (e.g. en-us)
+ *      |
+ *      +-- [baseListing]
+ *      |    +-- metadata.json (or <attribute>.txt)
+ *      |    +-- images
+ *      |        |
+ *      |        +-- <image type> (e.g. MobileScreenshot)
+ *      |            +-- <image>.png
+ *      |            +-- <image>.json (or <attribute>.<image>.txt)
+ *      |
+ *      +-- [platformOverrides]
+ *           |
+ *           +-- <platform> (e.g. Windows80)
+ *               |
+ *               +-- <same structure as 'baseListing'>
+ *
+ * If the task parameter for metadata update is "Text metadata", one
+ * text file is expected for each attribute to be added. If it is
+ * JSON metadata, one JSON file per listing and per image is expected.
+ *
+ * Both the baseListing and platformOverrides directory are optional.
+ *
+ * @param submissionResource A submission resource that will be modified in-place.
  */
-
 function updateMetadata(submissionResource: any): void
 {
-    console.log(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
+    tl.debug(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
     // Update metadata for listings
     var listingPaths = fs.readdirSync(taskParams.metadataRoot);
-    for (var i = 0; i < listingPaths.length; i++)
+    listingPaths.forEach(listingPath =>
     {
-        // Update metadata for this listing.
-        console.log(`Obtaining metadata for language ${listingPaths[i]}`);
-        let listingAbsPath = path.join(taskParams.metadataRoot, listingPaths[i]);
-        if (existsAndIsDir(path.join(listingAbsPath, 'baseListing')))
+        tl.debug(`Obtaining metadata for language ${listingPath}`);
+        let listingAbsPath = path.join(taskParams.metadataRoot, listingPath);
+
+        // Create the listing object if it is not present
+        if (submissionResource.listings[listingPath] === undefined)
         {
-            if (submissionResource.listings[listingPaths[i]] === undefined)
-            {
-                submissionResource.listings[listingPaths[i]] = {};
-            }
-            mergeObjects(submissionResource.listings[listingPaths[i]], makeListing(listingAbsPath, submissionResource.listings[listingPaths[i]]));
+            submissionResource.listings[listingPath] = {};
         }
-        else
-        {
-            tl.warning('Listing ' + listingPaths[i] + ' has no baseListing subdirectory. Skipping...');
-        }
-        console.log(`Finished parsing metadata for language ${listingPaths[i]}`)
-    }
+
+        // Merge the existing listing object with the new listing made from the given path
+        // Overrides are also checked in the makeListing call.
+        mergeObjects(submissionResource.listings[listingPath], makeListing(listingAbsPath, submissionResource.listings[listingPath]));
+    });
 
     // Update images from listings
     for (var listing in submissionResource.listings)
@@ -323,7 +349,7 @@ function updateMetadata(submissionResource: any): void
         {
             base.images = [];
         }
-        console.log(`Updating images from ${listingAbsPath}`);
+        tl.debug(`Updating images from ${listingAbsPath}`);
         updateImageMetadata(base.images, path.join(listingAbsPath, 'baseListing', 'images'));
 
         // Do the same for all the platform overrides
@@ -335,12 +361,10 @@ function updateMetadata(submissionResource: any): void
             {
                 platOverrideRef.images = [];
             }
-            console.log(`Updating platform override images from ${platPath}`);
+            tl.debug(`Updating platform override images from ${platPath}`);
             updateImageMetadata(platOverrideRef.images, platPath);
         }
     }
-
-    console.log('Finished updating metadata');
 }
 
 /**
@@ -350,35 +374,44 @@ function updateMetadata(submissionResource: any): void
  */
 function makeListing(listingAbsPath: string, languageJsonObj: any): any
 {
-    // Obtain base listing
-    console.log('Obtaining base listings metadata...');
-    var baseListing = getListingAttributes(path.join(listingAbsPath, 'baseListing'), languageJsonObj.baseListing);
-    console.log('Done!');
+    var baseListing = undefined;
+    var platformOverrides = undefined;
 
-    // Check if we have platform overrides
-    console.log('Verifying platform overrides directory...');
-    var platformOverrides = {};
+    // Check for a base listing.
+    var basePath = path.join(listingAbsPath, 'baseListing');
+    if (existsAndIsDir(basePath))
+    {
+        tl.debug('Obtaining base listing');
+        baseListing = getListingAttributes(basePath, languageJsonObj.baseListing);
+    }
+    
+
+    // Check for platform overrides.
     var overridesPath = path.join(listingAbsPath, 'platformOverrides');
-    console.log(`Looking for directory ${overridesPath}`)
     if (existsAndIsDir(overridesPath))
     {
-        console.log('Found platform overrides directory. Analyzing...');
+        platformOverrides = {};
         // If we do, consider each directory in the platformOverrides directory as a platform.
         var allOverrideDirs = fs.readdirSync(overridesPath).filter((x) =>
-            { try {fs.statSync(path.join(overridesPath, x)).isDirectory()} catch (e) { return false;} });
-        for (var i = 0; i < allOverrideDirs.length; i++)
+            fs.statSync(path.join(overridesPath, x)).isDirectory());
+
+        allOverrideDirs.forEach(overrideDir =>
         {
-            var overridePath = path.join(overridesPath, allOverrideDirs[i]);
-            console.log(`Obtaining listing metadata from folder ${overridePath}`);
-            platformOverrides[allOverrideDirs[i]] = getListingAttributes(overridePath, languageJsonObj.platformOverrides);
-        }
-        console.log('Done!');
+            var overridePath = path.join(overridesPath, overrideDir);
+            console.log(`Obtaining platform override ${overridePath}`);
+            platformOverrides[overrideDir] = getListingAttributes(overridePath, languageJsonObj.platformOverrides);
+        });
     }
-    else
+
+    // Avoid creating spurious properties on the return if they are undefined.
+    var ret: any = {};
+    if (baseListing != undefined)
     {
-        // Avoid creating an attribute for platform overrides if they're not there
-        console.log('No platform overrides folder found.');
-        platformOverrides = undefined;
+        ret.baseListing = baseListing;
+    }
+    if (platformOverrides != undefined)
+    {
+        ret.platformOverrides = platformOverrides;
     }
 
     return {
@@ -404,37 +437,42 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
         var jsonPath = path.join(listingWithPlatAbsPath, 'metadata.json');
         if (existsAndIsFile(jsonPath))
         {
+            tl.debug(`Loading listing attributes from ${jsonPath}`);
             listing = requireAbsoluteOrRelative(jsonPath);
-        }
-        else
-        {
-            tl.warning('No metadata.json found for ' + listingWithPlatAbsPath +
-                '. Attributes from the last submission will be used.');
         }
     }
     else
     {
-        for(var prop in jsonObj)
+        // Mapping from all-lowercase prop. names to their real casing in the json object
+        var jsonPropCaseMapping = {};
+        for (var prop in jsonObj)
         {
-            console.log(`Looking for corresponding file for property ${prop}`);
-            var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
-            !fs.statSync(path.join(listingWithPlatAbsPath, p)).isDirectory() &&
-            p.substring(p.length - 4) == '.txt' &&
-            path.parse(p).name.toUpperCase() === prop.toUpperCase());
+            jsonPropCaseMapping[prop.toLowerCase()] = prop;
+        }
 
-            if (propFiles === undefined || propFiles.length == 0)
+        var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
+            fs.statSync(path.join(listingWithPlatAbsPath, p)).isFile() &&
+            path.extname(p) == '.txt');
+
+        propFiles.forEach(propPath =>
+        {
+            /* If this filename compares case-insensitive to an existing property, set
+             * that particular property. */
+            var prop = path.basename(propPath, '.txt');
+            if (jsonPropCaseMapping[prop.toLowerCase()] !== undefined)
             {
-                console.warn(`No file found for property ${prop}`);
-                continue;
+                prop = jsonPropCaseMapping[prop];
             }
 
-            // Default to grab the first file that matches the property name.
-            var txtPath = path.join(listingWithPlatAbsPath, propFiles[0]);
-            console.log(`Working with file ${txtPath}`);
+            // Obtain the contents of the file as the value of the property
+            var txtPath = path.join(listingWithPlatAbsPath, propPath);
+            console.log(`Loading individual listing attribute from ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
+            // Based on whether this is an array or string attribute, split or not.
             listing[prop] = STRING_ARRAY_ATTRIBUTES[prop.toLowerCase()] ? splitAnyNewline(contents) : contents;
-        }
+        });
+
     }
 
     return listing;
@@ -449,27 +487,23 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
  */
 function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
 {
-    for (var i = 0; i < imageArray.length; i++)
-    {
-        imageArray[i].fileStatus = 'PendingDelete';
-    }
+    imageArray.forEach(img => img.fileStatus = 'PendingDelete');
 
     if (existsAndIsDir(imagesAbsPath))
     {
         var imageTypeDirs = fs.readdirSync(imagesAbsPath).filter(x =>
             fs.statSync(path.join(imagesAbsPath, x)).isDirectory());
 
-
         // Check all subdirectories for image types.
-        for (var i = 0; i < imageTypeDirs.length; i++)
+        imageTypeDirs.forEach(imageTypeDir =>
         {
-            var imageTypeAbs = path.join(imagesAbsPath, imageTypeDirs[i]);
+            var imageTypeAbs = path.join(imagesAbsPath, imageTypeDir);
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
-                p.substring(p.length - 4) == '.png') // Store only supports png
+                path.extname(p) == '.png') // Store only supports png
 
-            imageFiles.forEach((img) =>
+            imageFiles.forEach(img =>
             {
                 var imageName = path.parse(img).name;
                 var imageData = getImageAttributes(imageTypeAbs, imageName, currentFiles);
@@ -478,65 +512,66 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
                     imageArray.push(imageData);
                 }
             });
-        }
+        });
     }
 }
 
 /**
- * Obtain listing attributes from the given directory. If the metadata update type given in the task
+ * Obtain image attributes from the given directory. If the metadata update type given in the task
  * params is "Json update", it is expected that a file named "<image>.json" will be present at the
  * given path, and will contain the attributes to update. If the metadata update type is "Text update",
  * the listing path will be scanned for *.<image>.txt files. Any .txt file will be added to the attributes.
  * The name of the file will indicate the name of the attribute.
+ *
+ * In addition, the image will be marked as pending upload, and its image type will be given by the name
+ * of the directory it's in.
+ *
  * @param imagesAbsPath The absolute path to the current image directory.
  * @param imageName The filename of the image, without its extension.
  * @param currentFiles A list of files in the directory.
  */
 function getImageAttributes(imagesAbsPath: string, imageName: string, currentFiles: string[]): any
 {
+    var image;
+    var imageAbsName = path.join(imagesAbsPath, imageName);
+
     if (taskParams.metadataUpdateType == MetadataUpdateType.JsonMetadata)
     {
+        
         var jsonPath = path.join(imagesAbsPath, imageName + '.metadata.json');
-        if (existsAndIsFile(jsonPath))
-        {
-            return requireAbsoluteOrRelative(jsonPath);
-        }
-        else
-        {
-            tl.warning('No metadata.json found for image ' + path.join(imagesAbsPath, imageName) +
-                '. Image will be ignored');
-            return undefined;
-        }
+        tl.debug(`Loading attributes for ${imageAbsName} from ${jsonPath}`);
+        image = requireAbsoluteOrRelative(jsonPath);
     }
     else
     {
-        var image: any = {};
         // Obtain *.<imageName>.txt files and add them as attributes
         var txtFiles = currentFiles.filter(p =>
             !fs.statSync(path.join(imagesAbsPath, p)).isDirectory() &&
             p.substring(p.length - 4 - imageName.length) == imageName + '.txt');
 
-        for (var i = 0; i < txtFiles.length; i++)
+        txtFiles.forEach(txtFile =>
         {
-            var txtPath = path.join(imagesAbsPath, txtFiles[i]);
-            var attrib = txtFiles[i].substring(0, txtFiles[i].length - 4);
+            var txtPath = path.join(imagesAbsPath, txtFile);
+            tl.debug(`Loading individual attribute for ${imageAbsName} from ${txtPath}`);
+            var attrib = txtFile.substring(0, txtFile.indexOf('.'));
             image[attrib] = fs.readFileSync(txtPath, 'utf-8');
-        }
-
-        // The type of image is the name of the directory in which we find the image.
-        image.imageType = path.basename(imagesAbsPath);
-        image.fileStatus = 'PendingUpload';
-
-        // The filename we use is relative from the metadata root.
-        var filenameForMetadata = path.join(imagesAbsPath.replace(taskParams.metadataRoot, ''), imageName + '.png');
-        if (filenameForMetadata.charAt(0) == path.sep)
-        {
-            filenameForMetadata = filenameForMetadata.substring(1);
-        }
-
-        image.fileName = filenameForMetadata;
-        return image;
+        });
     }
+
+    // The type of image is the name of the directory in which we find the image.
+    image.imageType = path.basename(imagesAbsPath);
+    image.fileStatus = 'PendingUpload';
+
+    // The filename we use is relative from the metadata root.
+    // Surprisingly, there is no proper way to do this, so we use a dumb replace.
+    var filenameForMetadata = path.join(imagesAbsPath.replace(taskParams.metadataRoot, ''), imageName + '.png');
+    if (filenameForMetadata.charAt(0) == path.sep)
+    {
+        filenameForMetadata = filenameForMetadata.substring(1);
+    }
+
+    image.fileName = filenameForMetadata;
+    return image;
 
 }
 
