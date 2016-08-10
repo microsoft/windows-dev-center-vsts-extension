@@ -833,10 +833,8 @@ function mergeObjects(dest: any, source: any): void
 {
     for (var prop in source)
     {
-        console.log(`Merging property ${prop}`);
         if (!dest[prop])
         {
-            console.log(`Property ${prop} does not exist in destination object, adding it.`);
             dest[prop] = source[prop];
         }
         else if (typeof source[prop] != 'undefined')
@@ -845,29 +843,18 @@ function mergeObjects(dest: any, source: any): void
             {
                 var error = `Could not merge objects: conflicting types for property ${prop}: `
                     + `source has type ${typeof source[prop]}, but dest has type ${typeof dest[prop]}`;
-                console.log(error);
                 throw new Error(error);
             }
 
             if (typeof dest[prop] == 'object' && !Array.isArray(dest[prop]))
             {
-                console.log(`Property ${prop} is an object, merging internal properties...`);
                 mergeObjects(dest[prop], source[prop]);
             }
             else
             {
-                console.log(`Overriding destination value:`)
-                console.log(`<${dest[prop]}>`);
-                console.log(`with source value `);
-                console.log(`<${source[prop]}>`);
                 dest[prop] = source[prop];
             }
         }
-        else
-        {
-            console.log(`Property ${prop} is undefined in source, skipping.`);
-        }
-        console.log(`Done merging property ${prop}`);
     }
 }
 
