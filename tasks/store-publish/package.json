@@ -8,6 +8,7 @@
     "jszip": "^2.6.1",
     "q": "^1.4.1",
     "request": "^2.72.0",
+    "streamifier": "^0.1.1",
     "vsts-task-lib": "^0.9.5"
   }
 }
