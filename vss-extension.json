@@ -1,6 +1,6 @@
 ﻿{
     "manifestVersion": 1,
-    "id": "windows-store-publish-test",
+    "id": "windows-store-publish",
     "version": "0.7.8",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
