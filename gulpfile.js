@@ -8,7 +8,7 @@ var tsc = require('gulp-tsc');
 var EXTENSION_MANIFEST = 'vss-extension.json';
 var BUILD_DIR = 'build/';
 
-gulp.task('compile', ['task-dependencies'], function () {
+gulp.task('compile', function () {
     var tsconfig = require('./tsconfig.json').compilerOptions;
     
     return gulp
@@ -21,8 +21,8 @@ gulp.task('task-metadata', function () {
     return gulp
         // Copy over non-code files of the extension
         .src(['tasks/**/*.png'          // Task icons
-            , 'tasks/**/task.json'      // Task manifest
-            , 'tasks/**/node_modules/*' // Dependencies
+            , 'tasks/*/task.json'       // Task manifest
+            , 'tasks/*/package.json'    // List of task dependencies
             ])
         .pipe(gulp.dest(BUILD_DIR));
 });
@@ -39,7 +39,7 @@ gulp.task('extension-metadata', function() {
 })
 
 gulp.task('task-dependencies', ['task-metadata'], function (callback) {
-    exec('npm install', { cwd: 'tasks/store-publish/' }, callback);
+    exec('npm install', { cwd: BUILD_DIR + 'store-publish/' }, callback);
 });
 
 gulp.task('package', ['compile', 'task-metadata', 'extension-metadata', 'task-dependencies'], function (callback) {
