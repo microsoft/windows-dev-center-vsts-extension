@@ -138,6 +138,7 @@ export async function publishTask(params: PublishParams)
     currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
 
     var appResource = await getAppResource();
+
     appId = appResource.id; // Globally set app ID for future steps.
 
     // Delete pending submission if force is turned on (only one pending submission can exist)
@@ -160,7 +161,7 @@ export async function publishTask(params: PublishParams)
     }
 
     await commit(submissionResource.id);
-    await pollStatusWithRetry(submissionResource.id);
+    await pollSubmissionStatus(submissionResource.id);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
@@ -171,7 +172,6 @@ export async function publishTask(params: PublishParams)
  */
 function getAppResource(): Q.Promise<any>
 {
-    console.log('Getting app information...');
     if (hasAppId(taskParams))
     {
         // If we have an app ID then we can directly obtain its information
@@ -737,7 +737,42 @@ function commit(submissionId: string): Q.Promise<void>
  * @param submissionResource The submission to poll
  * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
  */
-function pollStatus(submissionId: string): Q.Promise<void>
+function pollSubmissionStatus(submissionId: string): Q.Promise<void>
+{
+    var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
+    return api.withRetry(5, submissionCheckGenerator, err => !is400Error(err)).then(status =>
+    {
+        if (status)
+        {
+            return;
+        }
+        else
+        {
+            return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(submissionId));
+        }
+    });
+}
+
+/** Indicates whether the given object is an HTTP response for a 4xx error. */
+function is400Error(err): boolean
+{
+    // Does this look like a ResponseInformation?
+    if (err.response != undefined && typeof err.response.statusCode == 'number')
+    {
+        return err.response.statusCode >= 400
+            && err.response.statusCode < 500
+    }
+
+    return false;
+}
+
+/**
+ * Checks the status of a submission.
+ * @param submissionId
+ * @return A promise for the status of the submission: true for completed, false for not completed yet.
+ * The promise will be rejected if an error occurs in the submission.
+ */
+function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
 {
     const statusMsg = 'Submission ' + submissionId + ' status for App ' + appId + ': ';
     const requestParams = {
@@ -745,9 +780,6 @@ function pollStatus(submissionId: string): Q.Promise<void>
         method: 'GET'
     };
 
-    /* This is a trivial function that generates a promise to poll the submission.
-     * See the documentation for api.withRetry.
-     */
     return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
     {
         /* Once the previous request has finished, examine the body to tell if we should start a new one. */
@@ -756,19 +788,9 @@ function pollStatus(submissionId: string): Q.Promise<void>
             tl.debug(statusMsg + body.status);
 
             /* In immediate mode, we expect to get all the way to "Published" status.
-                * In other modes, we stop at "Release" status. */
-            if (    body.status == 'Published'
-                || (body.status == 'Release' && body.targetPublishMode != 'Immediate'))
-            {
-                // Note that the fulfillment handler can either return a promise to a value (as below)
-                // or a value itself (as here).
-                return;
-            }
-            else
-            {
-                // Delay for some amount of time then try again.
-                return Q.delay(POLL_DELAY).then<void>(() => pollStatus(submissionId));
-            }
+             * In other modes, we stop at "Release" status. */
+            return body.status == 'Published'
+                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
         }
         else
         {
@@ -783,33 +805,6 @@ function pollStatus(submissionId: string): Q.Promise<void>
         }
     });
 }
-
-/**
- * Polls the status of a submission, retrying when errors occur.
- * @param submissionId
- */
-function pollStatusWithRetry(submissionId: string)
-{
-    // See documentation for api.withRetry.
-    var pollStatusGenerator = () => pollStatus(submissionId);
-
-    return Q(api.withRetry(5, pollStatusGenerator, err =>
-    {
-        // Does this look like a ResponseInformation?
-        // If so then we probably hit an error on the server
-        if (err.response != undefined && typeof err.response.statusCode == 'number')
-        {
-            // Try again if the response code is not between 400 and 499 (client errors)
-            return err.response.statusCode < 400
-                || err.response.statusCode >= 500
-        }
-
-        // In other cases, we probably hit some kind of transport error, so we should try again.
-        return true;
-    }));
-}
-
-
 
 function existsAndIsDir(aPath: string)
 {
