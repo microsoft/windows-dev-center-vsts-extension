@@ -18,35 +18,15 @@
         "Patch": "7"
     },
     "minimumAgentVersion": "1.83.0",
-    "instanceNameFormat": "Publish $(package)",
+    "instanceNameFormat": "Publish $(packagePath)",
     "inputs": [
-        {
-            "name": "authType",
-            "type": "pickList",
-            "label": "Authentication method",
-            "defaultValue": "ServiceEndpoint",
-            "options": {
-                "ServiceEndpoint": "Service endpoint",
-                "JsonFile": "JSON file"
-            }
-        },
         {
             "name": "serviceEndpoint",
             "type": "connectedService:devCenter",
             "label": "Service endpoint",
             "defaultValue": "",
             "required": true,
-            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials",
-            "visibleRule": "authType = ServiceEndpoint"
-        },
-        {
-            "name": "jsonAuthPath",
-            "type": "filePath",
-            "label": "JSON Authentication path",
-            "defaultValue": "",
-            "required": true,
-            "helpMarkDown": "JSON file containing an object specifying the URL, and tenant ID, client ID and client secret of the account to use for authentification",
-            "visibleRule": "authType = JsonFile"
+            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials"
         },
         {
             "name": "nameType",
@@ -99,9 +79,9 @@
         {
             "name": "metadataPath",
             "type": "filePath",
-            "label": "Metadata file",
+            "label": "Metadata root folder",
             "defaultValue": "",
-            "helpMarkDown": "Path to a file containing the metadata to update, in JSON format",
+            "helpMarkDown": "Path to a directory containing the metadata. Consult the documentation for the expected format.",
             "required": true,
             "visibleRule": "metadataUpdateMethod != NoUpdate"
         },
