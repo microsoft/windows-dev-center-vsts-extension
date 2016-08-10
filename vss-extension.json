@@ -48,7 +48,7 @@
             "properties": {
                 "name": "devCenter",
                 "displayName": "Windows Dev Center",
-                "url":  "https://manage.devcenter.microsoft.com",
+                "url":  "",
                 "inputDescriptors": [],
                 "authenticationSchemes": [
                     {
@@ -59,7 +59,7 @@
                                 "name": "Server URL",
                                 "description":  "Server URL",
                                 "inputMode": "textbox",
-                                "defaultValue":  "https://manage.devcenter.microsoft.com",
+                                "value":  "https://manage.devcenter.microsoft.com",
                                 "isConfidential": false,
                                 "validation": {
                                     "isRequired": true,
