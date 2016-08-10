@@ -11,8 +11,11 @@ import http = require('http'); // Only used for types
 import Q = require('q');
 import request = require('request');
 
-/** How long to wait between retries. */
+/** How long to wait between retries (in ms) */
 const RETRY_DELAY = 5000;
+
+/** After how long should a connection be given up (in ms). */
+const TIMEOUT = 15000;
 
 /** Credentials used to gain access to a particular resource. */
 export interface Credentials
@@ -55,23 +58,31 @@ export class ResponseInformation
     response: http.IncomingMessage;
     body: any;
 
+    constructor(_err: any, _res: http.IncomingMessage, _bod: any) 
+    {
+        this.error = _err;
+        this.response = _res;
+        this.body = _bod;
+    }
+
     // For friendly logging
     toString(): string
     {
-        var preamble = 'Status';
-
         if (this.error !== undefined)
         {
-            preamble = 'Error';
+            return `Error ${JSON.stringify(this.error)}`;
         }
-
-        var bodyToPrint = this.body;
-        if (typeof bodyToPrint != 'string')
+        else
         {
-            bodyToPrint = JSON.stringify(bodyToPrint);
-        }
 
-        return `${preamble} ${this.response.statusCode}: ${bodyToPrint}`;
+            var bodyToPrint = this.body;
+            if (typeof bodyToPrint != 'string')
+            {
+                bodyToPrint = JSON.stringify(bodyToPrint);
+            }
+
+            return `Status ${this.response.statusCode}: ${bodyToPrint}`;
+        }
     }
 }
 
@@ -93,7 +104,12 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
     Q.Promise<T>
 {
     var deferred = Q.defer<T>();
-    
+
+    if (options.timeout == undefined)
+    {
+        options.timeout = TIMEOUT;
+    }
+
     request(options, function (error, response, body)
     {
         // For convenience, parse the body if it's JSON.
@@ -106,21 +122,9 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
             logErrorsAndWarnings(body);
         }
 
-        var respInfo: ResponseInformation = {
-            error: error,
-            response: response,
-            body: body
-        }
-
-        if (error) // A transport-level error occurred (i.e. the request could not be completed)
+        if (error || (response && response.statusCode >= 400))
         {
-            console.log('Error: ' + error);
-            deferred.reject(respInfo);
-        }
-        else if (response.statusCode >= 400) // An application-level error occurred (i.e. the request was completed, but could not be fulfilled)
-        {
-            console.log('Error ' + response.statusCode)
-            deferred.reject(respInfo);
+            deferred.reject(new ResponseInformation(error, response, body));
         }
         else
         {
@@ -221,14 +225,28 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
  *
  * @param numRetries How many times should the promise be tried to be fulfilled.
  * @param promiseGenerator A function that will generate the promise to try to fulfill.
- * @param callback In case of rejection, receives the reason. Should return false to abort retrying.
+ * @param errPredicate In case an error occurs, receives the reason and returns whether to continue retrying
  */
-export async function withRetry<T>(
+export function withRetry<T>(
     numRetries: number,
     promiseGenerator: () => Q.Promise<T>,
-    callback?: ((err: any) => boolean)): Promise<T>
+    errPredicate?: ((err: any) => boolean)): Q.Promise<T>
 {
-    while (numRetries >= 0)
+    return promiseGenerator().fail(err =>
+    {
+        if (numRetries > 0 && (!errPredicate || errPredicate(err)))
+        {
+            console.log(`Operation failed with ${err}`);
+            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries} retrie(s) left)`);
+            return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
+        }
+        else
+        {
+            throw err;
+        }
+    });
+
+    /*while (numRetries >= 0)
     {
         try
         {
@@ -248,7 +266,7 @@ export async function withRetry<T>(
                 throw err;
             }
         }
-    }
+    }*/
 }
 
 /** 
