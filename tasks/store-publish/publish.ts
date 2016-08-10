@@ -160,7 +160,7 @@ export async function publishTask(params: PublishParams)
     }
 
     await commit(submissionResource.id);
-    await pollStatus(submissionResource.id);
+    await pollStatusWithRetry(submissionResource.id);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
@@ -745,7 +745,10 @@ function pollStatus(submissionId: string): Q.Promise<void>
         method: 'GET'
     };
 
-    var requestPromise = api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
+    /* This is a trivial function that generates a promise to poll the submission.
+     * See the documentation for api.withRetry.
+     */
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
     {
         /* Once the previous request has finished, examine the body to tell if we should start a new one. */
         if (!body.status.endsWith('Failed'))
@@ -753,7 +756,7 @@ function pollStatus(submissionId: string): Q.Promise<void>
             tl.debug(statusMsg + body.status);
 
             /* In immediate mode, we expect to get all the way to "Published" status.
-             * In other modes, we stop at "Release" status. */
+                * In other modes, we stop at "Release" status. */
             if (    body.status == 'Published'
                 || (body.status == 'Release' && body.targetPublishMode != 'Immediate'))
             {
@@ -779,8 +782,31 @@ function pollStatus(submissionId: string): Q.Promise<void>
             throw new Error('Commit failed');
         }
     });
+}
 
-    return api.withRetry(5, requestPromise);
+/**
+ * Polls the status of a submission, retrying when errors occur.
+ * @param submissionId
+ */
+function pollStatusWithRetry(submissionId: string)
+{
+    // See documentation for api.withRetry.
+    var pollStatusGenerator = () => pollStatus(submissionId);
+
+    return Q(api.withRetry(5, pollStatusGenerator, err =>
+    {
+        // Does this look like a ResponseInformation?
+        // If so then we probably hit an error on the server
+        if (err.response != undefined && typeof err.response.statusCode == 'number')
+        {
+            // Try again if the response code is not between 400 and 499 (client errors)
+            return err.response.statusCode < 400
+                || err.response.statusCode >= 500
+        }
+
+        // In other cases, we probably hit some kind of transport error, so we should try again.
+        return true;
+    }));
 }
 
 
