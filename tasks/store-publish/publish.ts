@@ -17,6 +17,7 @@ import os = require('os');
 import JSZip = require('jszip');
 import Q = require('q');
 import request = require('request');
+var streamifier = require('streamifier'); // streamifier has no typings
 import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
@@ -147,7 +148,17 @@ export async function publishTask(params: PublishParams)
 
     var submissionResource = await createSubmission();
     await putMetadata(submissionResource);
-    await uploadZip(submissionResource, taskParams.zipFilePath);
+
+    var zip = createZip(taskParams.packages, submissionResource);
+    // There might be no files in the zip if the user didn't supply any packages or images.
+    // If there are files, write the file locally and also upload it.
+    if (Object.keys(zip.files).length > 0)
+    {
+        var buf: Buffer = createZipBuffer(zip);
+        fs.writeFileSync(taskParams.zipFilePath, buf);
+        await uploadZip(buf, submissionResource.fileUploadUrl);
+    }
+
     await commit(submissionResource.id);
     await pollStatus(submissionResource.id);
 
@@ -532,7 +543,7 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
  */
 function getImageAttributes(imagesAbsPath: string, imageName: string, currentFiles: string[]): any
 {
-    var image;
+    var image: any = {};
     var imageAbsName = path.join(imagesAbsPath, imageName);
 
     if (taskParams.metadataUpdateType == MetadataUpdateType.JsonMetadata)
@@ -576,28 +587,81 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
 }
 
 /**
- * Creates and uploads a zip file to the blob in the submissionResource.
+ * Create a zip file containing the information 
  * @param submissionResource
- * @return A promise for the upload of the zip file.
  */
-function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<void>
+function createZip(packages: string[], submissionResource: any): JSZip
 {
-    console.log(`Creating zip file into ${zipFilePath}`);
-
+    tl.debug(`Creating zip file`);
     var zip = new JSZip();
-    var hasFiles = false;
+    addPackagesToZip(packages, zip);
+    addImagesToZip(submissionResource, zip);
+    return zip;
+}
 
-    console.log('Adding packages to zip');
-    hasFiles = addPackagesToZip(zip);
-    console.log('Adding images to zip');
-    hasFiles = addImagesToZip(submissionResource, zip) || hasFiles;
+/**
+ * Add the given packages to the given zip file.
+ * Each package is placed under its own directory that is named by the index of the
+ * package in this list. This is to prevent name collisions.
+ * @see makePackageEntry
+ */
+function addPackagesToZip(packages: string[], zip: JSZip): void
+{
+    var currentFiles = {};
 
-    if (!hasFiles)
+    packages.forEach((aPath, i) =>
     {
-        // Promise for nothing
-        return Q.when();
-    }
+        if (!existsAndIsFile(aPath))
+        {
+            tl.warning(`Skipping supplied package ${aPath} which does not exist or is not a file`);
+        }
+        else
+        {
+            // According to JSZip documentation, the directory separator used is a forward slash.
+            var entry = makePackageEntry(aPath, i).replace('\\', '/');
+            console.log(`Adding package path ${aPath} to zip as ${entry}`);
+            zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
+        }
+    });
+}
 
+/**
+ * Add any PendingUpload images in the given submission resource to the given zip file.
+ */
+function addImagesToZip(submissionResource: any, zip: JSZip)
+{
+    for (var listingKey in submissionResource.listings)
+    {
+        console.log(`Adding images for listing ${listingKey}`);
+        var listing = submissionResource.listings[listingKey];
+        addImagesToZipFromListing(listing.baseListing.images, zip);
+
+        for (var platOverrideKey in listing.platformOverrides)
+        {
+            console.log(`Adding images for platform override ${listingKey}/${platOverrideKey}`);
+            var platOverride = listing.platformOverrides[platOverrideKey];
+            addImagesToZipFromListing(platOverride.images, zip);
+        }
+    }
+}
+
+function addImagesToZipFromListing(images: any[], zip: JSZip)
+{
+    images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
+    {
+        var imgPath = path.join(taskParams.metadataRoot, image.fileName);
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var filenameInZip = image.fileName.replace('\\', '/');
+        console.log(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
+        zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
+    });
+}
+
+/**
+ * Creates a buffer to the given zip file.
+ */
+function createZipBuffer(zip: JSZip): Buffer
+{
     var zipGenerationOptions = {
         base64: false,
         compression: 'DEFLATE',
@@ -605,29 +669,36 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<void
         streamFiles: true
     };
 
-    var buffer = zip.generate(zipGenerationOptions)
-    fs.writeFileSync(zipFilePath, buffer);
+    return zip.generate(zipGenerationOptions);
+}
 
+/**
+ * Creates and uploads a zip file to the appropriate blob.
+ * @param zip A buffer containing the zip file
+ * @return A promise for the upload of the zip file.
+ */
+function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
+{
     var requestParams = {
         headers: {
-            'Content-Length': buffer.length,
+            'Content-Length': zip.length,
             'x-ms-blob-type': 'BlockBlob'
         }
     }
     var deferred = Q.defer<void>();
-
+    
     /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
      * base64 parameter. There is no good way to fix this, because we don't really know how to
      * distinguish between 'correct' uses of those characters, and their spurious instances in
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
-    var dest = submissionResource.fileUploadUrl.replace(/\+/g, '%2B');
+    var dest = /*submissionResource.fileUploadUrl*/ blobUrl.replace(/\+/g, '%2B');
     console.log(`Uploading to ${dest}`);
 
     /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
-     * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the file is
+     * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the zip is
      * piped from a stream to the put request. */
-    fs.createReadStream(zipFilePath).pipe(request.put(dest, requestParams, function (err, resp, body)
+    streamifier.createReadStream(zip).pipe(request.put(dest, requestParams, function (err, resp, body)
     {
         if (err)
         {
@@ -645,74 +716,6 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<void
 
     return deferred.promise;
 }
-
-/**
- * Add the packages given as parameters to the task to the given zip file.
- * @param zip
- * @return Whether some packages were added to the zip file.
- */
-function addPackagesToZip(zip: JSZip): boolean
-{
-    var currentFiles = {};
-
-    taskParams.packages.forEach((aPath, i) =>
-    {
-        if (!existsAndIsFile(aPath))
-        {
-            tl.warning('Supplied package ' + aPath + ' does not exist or is not a file. Skipping...');
-        }
-        else
-        {
-            // According to JSZip documentation, the directory separator used is a forward slash.
-            var entry = makePackageEntry(aPath, i).replace('\\', '/');
-            console.log(`Adding entry ${entry} to zip file from path ${aPath}`);
-            zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
-        }
-    });
-
-    return taskParams.packages.length > 0;
-}
-
-/**
- * Add any PendingUpload images in the given submission resource to the given zip file.
- */
-function addImagesToZip(submissionResource: any, zip: JSZip): boolean
-{
-    var hasAddedImages = false;
-    for (var listingKey in submissionResource.listings)
-    {
-        console.log(`Adding images for listing ${listingKey}`);
-        var listing = submissionResource.listings[listingKey];
-        hasAddedImages = addImagesToZipFromListing(listing.baseListing.images, zip) || hasAddedImages;
-
-        for (var platOverrideKey in listing.platformOverrides)
-        {
-            console.log(`Adding images for platform override ${platOverrideKey}`);
-            var platOverride = listing.platformOverrides[platOverrideKey];
-            hasAddedImages = addImagesToZipFromListing(platOverride.images, zip) || hasAddedImages;
-        }
-    }
-
-    return hasAddedImages;
-}
-
-function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
-{
-    var hasAddedImages = false;
-    images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
-    {
-        hasAddedImages = true;
-
-        var imgPath = path.join(taskParams.metadataRoot, image.fileName);
-        // According to JSZip documentation, the directory separator used is a forward slash.
-        var filenameInZip = image.fileName.replace('\\', '/');
-        console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
-        zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
-    });
-
-    return hasAddedImages;
-}
-
 
 /**
  * Commits a submission, checking for any errors.
