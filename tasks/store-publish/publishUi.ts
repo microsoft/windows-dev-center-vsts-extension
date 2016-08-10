@@ -55,7 +55,7 @@ function gatherParams()
             clientSecret : endpointAuth.parameters['servicePrincipalKey']
         };
 
-        endpointUrl = tl.getEndpointUrl(endpointId, false);
+        endpointUrl = endpointAuth.parameters['url'];
     }
     else if (authType == "JsonFile")
     {
