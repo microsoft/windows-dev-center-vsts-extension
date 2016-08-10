@@ -10,65 +10,23 @@ import path = require('path');
 
 import tl = require('vsts-task-lib');
 
-/**
- * Gets the value of a path input, and additionally checks that the path is a file. The task
- * fails if the path was not supplied, or if the supplied path is not an existing file.
- */
-function getPathInputAsFile(name: string, required: boolean): string
-{
-    var path = tl.getPathInput(name, required, false);
-    
-    var stat = fs.statSync(path);
-
-    // It's an error if the file was required and stat failed (stat will fail if the path is empty)
-    if (required && !stat)
-    {
-        throw new Error('Parameter error for "' + name + '": cannot access path "' + path + '"');
-    }
-
-    // It's an error if the path is not empty but also not a file.
-    if (path && !stat.isFile())
-    {
-        throw new Error('Parameter error for "' + name + '": path "' + path + '" is not a file');
-    }
-
-    return path;
-}
-
 /** Obtain and validate parameters from task UI. */
 function gatherParams()
 {
     var credentials: api.Credentials;
-    var endpointUrl: string;
+    var endpointId = tl.getInput('serviceEndpoint', true);
 
-    var authType = tl.getInput('authType', true);
-
-    if (authType == 'ServiceEndpoint')
+    /* Contrary to the other tl.get* functions, the boolean param here
+        indicates whether the parameter is __optional__ */
+    var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
+    credentials = 
     {
-        var endpointId = tl.getInput('serviceEndpoint', true);
+        tenant : endpointAuth.parameters['tenantId'],
+        clientId : endpointAuth.parameters['servicePrincipalId'],
+        clientSecret : endpointAuth.parameters['servicePrincipalKey']
+    };
 
-        var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
-        credentials = 
-        {
-            tenant : endpointAuth.parameters['tenantId'],
-            clientId : endpointAuth.parameters['servicePrincipalId'],
-            clientSecret : endpointAuth.parameters['servicePrincipalKey']
-        };
-
-        endpointUrl = tl.getEndpointUrl(endpointId, false);
-    }
-    else if (authType == "JsonFile")
-    {
-        var jsonPath = getPathInputAsFile('jsonAuthPath', true);
-        var data = require(jsonPath);
-
-        credentials = data.credentials;
-        endpointUrl = data.endpointUrl;
-    }
-    else
-    {
-        throw new Error('Unsupported authentication method: ' + authType);
-    }
+    var endpointUrl: string = tl.getEndpointUrl(endpointId, false);
 
     var taskParams: pub.PublishParams = {
         appName : '',
@@ -87,13 +45,18 @@ function gatherParams()
     taskParams.packages = packages;
 
     // App identification
-    if (tl.getInput('nameType', true) == 'AppId')
+    var nameType = tl.getInput('nameType', true);
+    if (nameType == 'AppId')
     {
         (<pub.ParamsWithAppId>taskParams).appId = tl.getInput('appId', true);
     }
-    else
+    else if (nameType == 'AppName')
     {
         (<pub.ParamsWithAppName>taskParams).appName = tl.getInput('appName', true);
+    }
+    else
+    {
+        throw new Error(`Invalid name type ${nameType}`);
     }
 
     taskParams.metadataRoot = canonicalizePath(tl.getPathInput('metadataPath', false, true));
@@ -129,11 +92,54 @@ function canonicalizePath(aPath: string): string
     return path.normalize(path.format(pathObj));
 }
 
+function dumpParams(taskParams: pub.PublishParams): void
+{
+    // We won't log the credentials, as they get masked by VSTS anyways.
+    if (pub.hasAppId(taskParams))
+    {
+        tl.debug(`App ID: ${taskParams.appId}`);
+    }
+    else
+    {
+        tl.debug(`App ID: ${taskParams.appName}`);
+    }
+
+    tl.debug(`Endpoint: ${taskParams.endpoint}`);
+    tl.debug(`Force delete: ${taskParams.force}`);
+    tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
+    tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
+    tl.debug(`Packages: ${taskParams.packages.join(',')}`);
+}
+
+/**
+ * Gets the value of a path input, and additionally checks that the path is a file. The task
+ * fails if the path was not supplied, or if the supplied path is not an existing file.
+ */
+function getPathInputAsFile(name: string, required: boolean): string
+{
+    var filePath = tl.getPathInput(name, required, false);
+
+    // It's an error if the file was required and stat failed (stat will fail if the path is empty)
+    if (required && !fs.exists(filePath))
+    {
+        throw new Error('Parameter error for "' + name + '": cannot access path "' + filePath + '"');
+    }
+
+    // It's an error if the path is not empty but also not a file.
+    if (filePath && !fs.statSync(filePath).isFile())
+    {
+        throw new Error('Parameter error for "' + name + '": path "' + filePath + '" is not a file');
+    }
+
+    return filePath;
+}
+
 async function main()
 {
     try
     {
         var taskParams: pub.PublishParams = gatherParams();
+        dumpParams(taskParams);
         await pub.publishTask(taskParams);
     }
     catch (err)
