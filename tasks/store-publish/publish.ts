@@ -6,7 +6,7 @@
 /// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/jszip/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
-/// <reference path="./node_modules/vsts-task-lib/task.d.ts" />
+/// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
 import api = require('./apiWrapper');
 
@@ -86,7 +86,7 @@ export type PublishParams = ParamsWithAppId | ParamsWithAppName;
 /**
  * Type guard: indicates whether these parameters contain an App Id or not.
  */
-function hasAppId(p: PublishParams): p is ParamsWithAppId
+export function hasAppId(p: PublishParams): p is ParamsWithAppId
 {
     return (<ParamsWithAppId>p).appId !== undefined;
 }
