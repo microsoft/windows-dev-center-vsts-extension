@@ -97,7 +97,8 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
     request(options, function (error, response, body)
     {
         // For convenience, parse the body if it's JSON.
-        if (response.headers['content-type'] !== undefined &&   // content-type is undefined if there is no content
+        if (response != undefined && // response is undefined if a transport-level error occurs
+            response.headers['content-type'] != undefined &&   // content-type is undefined if there is no content
             response.headers['content-type'].indexOf('application/json') != -1 &&
             typeof body == 'string') // body might be an object if the options given to request already parsed it for us
         {
@@ -213,26 +214,41 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
 
 /**
  * Transforms a promise so that it is tried again a specific number of times if it fails.
+ *
+ * A 'generator' of promises must be supplied. The reason is that if a promise fails,
+ * then it will stay in a failed state and it won't be possible to await on it anymore.
+ * Therefore a new promise must be returned every time.
+ *
  * @param numRetries How many times should the promise be tried to be fulfilled.
- * @param promise The promise to fulfill
+ * @param promiseGenerator A function that will generate the promise to try to fulfill.
  * @param callback In case of rejection, receives the reason. Should return false to abort retrying.
  */
-export function withRetry<T>(
+export async function withRetry<T>(
     numRetries: number,
-    promise: Q.Promise<T>,
-    callback?: ((err: any) => boolean)): Q.Promise<T>
+    promiseGenerator: () => Q.Promise<T>,
+    callback?: ((err: any) => boolean)): Promise<T>
 {
-    return promise.fail<T>(function (err)
+    while (numRetries >= 0)
     {
-        if (numRetries > 0 && (!callback || callback(err)))
+        try
         {
-            return Q.delay(withRetry(numRetries - 1, promise, callback), RETRY_DELAY);
+            return await promiseGenerator();
         }
-        else
+        catch (err)
         {
-            throw err;
+            console.log(`Operation failed with ${err}`);
+            if (numRetries > 0 && (!callback || callback(err)))
+            {
+                console.log(`Retrying... (${numRetries} retrie(s) left)`);
+                numRetries--;
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            }
+            else
+            {
+                throw err;
+            }
         }
-    });
+    }
 }
 
 /** 
