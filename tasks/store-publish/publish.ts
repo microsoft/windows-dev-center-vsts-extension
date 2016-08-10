@@ -125,28 +125,29 @@ var appId: string;
 /**
  * The main task function.
  */
-export function publishTask(params: PublishParams): void
+export async function publishTask(params: PublishParams)
 {
     taskParams = params;
     ROOT = taskParams.endpoint + 'v1.0/my/';
 
-    api.authenticate(taskParams.endpoint, taskParams.authentication)
-        .then(tok => currentToken = tok) // Globally set token for future steps.
-        .then(getAppResource)
-        .then(deleteIfForce)
-        .then(appRes => appId = appRes.id) // Globally set app ID for future steps.
-        .then(createSubmission)
-        .then(putMetadata)
-        .then((submissionResource) => uploadZip(submissionResource, taskParams.zipFilePath))
-        .then(commit)
-        .then(pollStatus)
-        .done(
-            () => tl.setResult(tl.TaskResult.Succeeded, 'Submission completed'),
-            (err) => {
-                tl.error(err);
-                tl.setResult(tl.TaskResult.Failed, JSON.stringify(err))
-            }
-    );
+    currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
+
+    var appResource = await getAppResource();
+    appId = appResource.id; // Globally set app ID for future steps.
+
+    // Delete pending submission if force is turned on (only one pending submission can exist)
+    if (taskParams.force && appResource.pendingApplicationSubmission !== undefined)
+    {
+        await deleteSubmission(appResource.pendingApplicationSubmission.resourceLocation);
+    }
+
+    var submissionResource = await createSubmission();
+    await putMetadata(submissionResource);
+    await uploadZip(submissionResource, taskParams.zipFilePath);
+    await commit(submissionResource.id);
+    await pollStatus(submissionResource.id);
+
+    tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
 
 /**
@@ -217,30 +218,23 @@ function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.P
  * If the 'force' parameter is turned on, checks whether a submission is already existing and
  * deletes it if it's the case.
  * @param appResource
- * @returns Promises back the app resource (in other words, the app resource is chained to the next caller)
+ * @return A promise for the deletion of the submission
  */
-function deleteIfForce(appResource: any): Q.Promise<any>
+function deleteSubmission(submissionLocation: string): Q.Promise<void>
 {
-    if (taskParams.force && appResource.pendingApplicationSubmission !== undefined)
-    {
-        console.log('Force-deleting existing submission...');
-        var requestParams = {
-            url: ROOT + appResource.pendingApplicationSubmission.resourceLocation,
-            method: 'DELETE'
-        };
+    tl.debug(`Deleting submission ${submissionLocation}`);
+    var requestParams = {
+        url: ROOT + submissionLocation,
+        method: 'DELETE'
+    };
 
-        return api.performAuthenticatedRequest(currentToken, requestParams).thenResolve(appResource);
-    }
-    else
-    {
-        return Q.fcall(() => appResource);
-    }
+    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
-/** Creates a submission for a given app. Promises the information about the submission. */
+/** Creates a submission for a given app. Promises the submission resource. */
 function createSubmission(): Q.Promise<any>
 {
-    console.log('Creating new submission...');
+    tl.debug('Creating new submission');
     var requestParams = {
         url: ROOT + 'applications/' + appId + '/submissions',
         method: 'POST'
@@ -254,9 +248,9 @@ function createSubmission(): Q.Promise<any>
  * If no metadata update is to be perfomed, no changes are made. Otherwise, we look for the metadata
  * depending on the type of update (text or json).
  * @param submissionResource The current submission request
- * @returns Promises the submission resource that was sent to the API.
+ * @returns A promise for the update of the submission on the server.
  */
-function putMetadata(submissionResource: any): Q.Promise<any>
+function putMetadata(submissionResource: any): Q.Promise<void>
 {
     console.log('Adding submission metadata...');
 
@@ -286,7 +280,7 @@ function putMetadata(submissionResource: any): Q.Promise<any>
     };
 
     console.log('Updating submission in the server');
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).thenResolve(submissionResource);
+    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
 /**
@@ -549,9 +543,9 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
 /**
  * Creates and uploads a zip file to the blob in the submissionResource.
  * @param submissionResource
- * @return Promises back the submission resource.
+ * @return A promise for the upload of the zip file.
  */
-function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
+function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<void>
 {
     console.log(`Creating zip file into ${zipFilePath}`);
 
@@ -565,7 +559,8 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
 
     if (!hasFiles)
     {
-        return Q.fcall(() => submissionResource);
+        // Promise for nothing
+        return Q.when();
     }
 
     var zipGenerationOptions = {
@@ -584,7 +579,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
             'x-ms-blob-type': 'BlockBlob'
         }
     }
-    var deferred = Q.defer<any>();
+    var deferred = Q.defer<void>();
 
     /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
      * base64 parameter. There is no good way to fix this, because we don't really know how to
@@ -609,7 +604,7 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
         }
         else
         {
-            deferred.resolve(submissionResource);
+            deferred.resolve();
         }
     }));
 
@@ -686,17 +681,17 @@ function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
 
 /**
  * Commits a submission, checking for any errors.
- * @param submissionResource
+ * @return A promise for the commit of the submission
  */
-function commit(submissionResource: any): any
+function commit(submissionId: string): Q.Promise<void>
 {
     console.log('Committing submission...');
     var requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id + '/commit',
+        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).thenResolve(submissionResource);
+    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
 /**
@@ -704,11 +699,11 @@ function commit(submissionResource: any): any
  * @param submissionResource The submission to poll
  * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
  */
-function pollStatus(submissionResource: any): Q.Promise<void>
+function pollStatus(submissionId: string): Q.Promise<void>
 {
-    const statusMsg = 'Submission ' + submissionResource.id + ' status for App ' + appId + ': ';
+    const statusMsg = 'Submission ' + submissionId + ' status for App ' + appId + ': ';
     const requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,
+        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId,
         method: 'GET'
     };
 
@@ -731,7 +726,7 @@ function pollStatus(submissionResource: any): Q.Promise<void>
             else
             {
                 // Delay for some amount of time then try again.
-                return Q.delay(POLL_DELAY).then<void>(() => pollStatus(submissionResource));
+                return Q.delay(POLL_DELAY).then<void>(() => pollStatus(submissionId));
             }
         }
         else
