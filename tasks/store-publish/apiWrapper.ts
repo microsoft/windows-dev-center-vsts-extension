@@ -15,7 +15,7 @@ import request = require('request');
 const RETRY_DELAY = 5000;
 
 /** After how long should a connection be given up (in ms). */
-const TIMEOUT = 15000;
+const TIMEOUT = 30000;
 
 /** Credentials used to gain access to a particular resource. */
 export interface Credentials
@@ -68,7 +68,7 @@ export class ResponseInformation
     // For friendly logging
     toString(): string
     {
-        if (this.error !== undefined)
+        if (this.error != undefined)
         {
             return `Error ${JSON.stringify(this.error)}`;
         }
@@ -189,12 +189,11 @@ export function performAuthenticatedRequest<T>(
 export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
 {
     var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
-    var newString = encodeURIComponent(credentials.clientSecret);
     var requestParams = {
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
         client_secret: credentials.clientSecret,
-        resource: resource.substr(0, resource.length -1)
+        resource: resource
     };
 
     var options = {
@@ -203,6 +202,7 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
         form: requestParams
     };
 
+    console.log('Authenticating with server...');
     return performRequest<any>(options).then<AccessToken>(body =>
     {
         var tok: AccessToken = {
@@ -277,13 +277,13 @@ export function withRetry<T>(
  */
 function logErrorsAndWarnings(body: any)
 {
-    if (body.errors !== undefined && body.errors.length > 0)
+    if (body.errors != undefined && body.errors.length > 0)
     {
         console.error('Errors occurred in request');
         (<any[]>body.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
     }
 
-    if (body.warnings !== undefined && body.warnings.length > 0)
+    if (body.warnings != undefined && body.warnings.length > 0)
     {
         console.warn('Warnings occurred in request');
         (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));

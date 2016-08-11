@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "6",
-        "Patch": "7"
+        "Patch": "843"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Publish $(packagePath)",
@@ -90,7 +90,7 @@
             "type": "filePath",
             "label": "Package file",
             "defaultValue": "",
-            "required": true,
+            "required": false,
             "helpMarkDown": "Path to the application's package"
         },
         {

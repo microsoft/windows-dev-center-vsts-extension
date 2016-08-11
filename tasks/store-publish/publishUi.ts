@@ -27,6 +27,10 @@ function gatherParams()
     };
 
     var endpointUrl: string = endpointAuth.parameters['url'];
+    if (endpointUrl.lastIndexOf('/') == endpointUrl.length - 1)
+    {
+        endpointUrl = endpointUrl.substring(0, endpointUrl.length - 1);
+    }
 
     var taskParams: pub.PublishParams = {
         appName : '',
@@ -40,9 +44,12 @@ function gatherParams()
 
     // Packages
     var packages: string[] = [];
-    packages.push(getPathInputAsFile('packagePath', false));
+    if (inputFilePathSupplied('packagePath', false))
+    {
+        packages.push(tl.getInput('packagePath', false));
+    }
     packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
-    taskParams.packages = packages;
+    taskParams.packages = packages.filter(p => p.trim().length != 0);
 
     // App identification
     var nameType = tl.getInput('nameType', true);
@@ -65,6 +72,18 @@ function gatherParams()
     return taskParams;
 }
 
+/**
+ * Verifies if the filePath input was supplied by comparing it with the working directory of the release.
+ * 
+ * VSTS will put by default the working directory as the value of an empty filePath input.
+ * @param name The name of the input parameter;
+ * @return true if the path was supplied, false if it is equal to the working directory;
+ */
+function inputFilePathSupplied(name: string, required: boolean) : boolean
+{
+    var path = tl.getInput(name, required);
+    return path != tl.getVariable('Agent.ReleaseDirectory');
+}
 
 /**
  * Creates a canonical version of a path. Separators are converted to the current platform,
@@ -109,29 +128,6 @@ function dumpParams(taskParams: pub.PublishParams): void
     tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
     tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
-}
-
-/**
- * Gets the value of a path input, and additionally checks that the path is a file. The task
- * fails if the path was not supplied, or if the supplied path is not an existing file.
- */
-function getPathInputAsFile(name: string, required: boolean): string
-{
-    var filePath = tl.getPathInput(name, required, false);
-
-    // It's an error if the file was required and stat failed (stat will fail if the path is empty)
-    if (required && !fs.exists(filePath))
-    {
-        throw new Error('Parameter error for "' + name + '": cannot access path "' + filePath + '"');
-    }
-
-    // It's an error if the path is not empty but also not a file.
-    if (filePath && !fs.statSync(filePath).isFile())
-    {
-        throw new Error('Parameter error for "' + name + '": path "' + filePath + '" is not a file');
-    }
-
-    return filePath;
 }
 
 async function main()

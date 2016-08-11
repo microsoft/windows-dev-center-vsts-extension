@@ -88,7 +88,7 @@ export type PublishParams = ParamsWithAppId | ParamsWithAppName;
  */
 export function hasAppId(p: PublishParams): p is ParamsWithAppId
 {
-    return (<ParamsWithAppId>p).appId !== undefined;
+    return (<ParamsWithAppId>p).appId != undefined;
 }
 
 /** The root of all API requests */
@@ -109,7 +109,7 @@ const STRING_ARRAY_ATTRIBUTES =
  * A little part of the URL to the API that contains a version number.
  * This may need to be updated in the future to comply with the API.
  */
-const API_URL_VERSION_PART = 'v1.0/my/';
+const API_URL_VERSION_PART = '/v1.0/my/';
 
 /**
  * The parameters given to the task. They're declared here to be
@@ -142,7 +142,7 @@ export async function publishTask(params: PublishParams)
     appId = appResource.id; // Globally set app ID for future steps.
 
     // Delete pending submission if force is turned on (only one pending submission can exist)
-    if (taskParams.force && appResource.pendingApplicationSubmission !== undefined)
+    if (taskParams.force && appResource.pendingApplicationSubmission != undefined)
     {
         await deleteSubmission(appResource.pendingApplicationSubmission.resourceLocation);
     }
@@ -468,11 +468,12 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
         propFiles.forEach(propPath =>
         {
             /* If this filename compares case-insensitive to an existing property, set
-             * that particular property. */
-            var prop = path.basename(propPath, '.txt');
-            if (jsonPropCaseMapping[prop.toLowerCase()] !== undefined)
+             * that particular property. Preserve the name if the property does not exist already.*/
+            var originalPropName = path.basename(propPath, '.txt'); 
+            var normalizedPropertyName = originalPropName.toLocaleLowerCase();
+            if (jsonPropCaseMapping[normalizedPropertyName] != undefined)
             {
-                prop = jsonPropCaseMapping[prop];
+                originalPropName = jsonPropCaseMapping[normalizedPropertyName];
             }
 
             // Obtain the contents of the file as the value of the property
@@ -481,7 +482,7 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
             // Based on whether this is an array or string attribute, split or not.
-            listing[prop] = STRING_ARRAY_ATTRIBUTES[prop.toLowerCase()] ? splitAnyNewline(contents) : contents;
+            listing[originalPropName] = STRING_ARRAY_ATTRIBUTES[normalizedPropertyName] ? splitAnyNewline(contents) : contents;
         });
 
     }
@@ -611,17 +612,10 @@ function addPackagesToZip(packages: string[], zip: JSZip): void
 
     packages.forEach((aPath, i) =>
     {
-        if (!existsAndIsFile(aPath))
-        {
-            tl.warning(`Skipping supplied package ${aPath} which does not exist or is not a file`);
-        }
-        else
-        {
-            // According to JSZip documentation, the directory separator used is a forward slash.
-            var entry = makePackageEntry(aPath, i).replace('\\', '/');
-            console.log(`Adding package path ${aPath} to zip as ${entry}`);
-            zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
-        }
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var entry = makePackageEntry(aPath, i).replace('\\', '/');
+        console.log(`Adding package path ${aPath} to zip as ${entry}`);
+        zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
     });
 }
 
