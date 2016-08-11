@@ -6,7 +6,7 @@ Windows Dev Center.
 
 ## Quick start
 
-1. Ensure you meet the [prerequistes](#prerequistes).
+1. Ensure you meet the [prerequistes](#prerequisites).
 
 2. [Install](https://marketplace.visualstudio.com/items?itemName=MS.RDX.MRO.windows-store-publish) the extension.
 
