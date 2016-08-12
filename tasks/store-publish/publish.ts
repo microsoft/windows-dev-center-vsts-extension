@@ -343,51 +343,72 @@ function putMetadata(submissionResource: any): Q.Promise<void>
 function updateMetadata(submissionResource: any): void
 {
     tl.debug(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
-    // Update metadata for listings
-    var listingPaths = fs.readdirSync(taskParams.metadataRoot);
-    listingPaths.forEach(listingPath =>
+    var listings = fs.readdirSync(taskParams.metadataRoot);
+    listings.forEach(listing =>
     {
-        tl.debug(`Obtaining metadata for language ${listingPath}`);
-        let listingAbsPath = path.join(taskParams.metadataRoot, listingPath);
+        updateListingAttributes(submissionResource, listing);
 
-        // Create the listing object if it is not present
-        if (submissionResource.listings[listingPath] === undefined)
-        {
-            submissionResource.listings[listingPath] = {};
-        }
-
-        // Merge the existing listing object with the new listing made from the given path
-        // Overrides are also checked in the makeListing call.
-        mergeObjects(submissionResource.listings[listingPath], makeListing(listingAbsPath));
+        updateListingImages(submissionResource, listing);
     });
+}
 
-    // Update images from listings
-    for (var listing in submissionResource.listings)
+/**
+ * Update the attributes of a listing in a submission (e.g. description, features, etc.)
+ * @param submissionResource
+ * @param listingPath
+ */
+function updateListingAttributes(submissionResource: any, listing: string)
+{
+    tl.debug(`Obtaining metadata for language ${listing}`);
+
+    // Create the listing object if it is not present
+    if (submissionResource.listings[listing] === undefined)
     {
-        // Update image metadata for the base listing.
-        let listingAbsPath = path.join(taskParams.metadataRoot, listing);
-        var base = submissionResource.listings[listing].baseListing;
-        if (base.images === undefined)
+        submissionResource.listings[listing] = {};
+    }
+
+    // Merge the existing listing object with the new listing made from the given path
+    // Overrides are also checked in the makeListing call.
+    var listingPath = path.join(taskParams.metadataRoot, listing);
+    mergeObjects(submissionResource.listings[listing], makeListing(listingPath), true);
+}
+
+/**
+ * Update the images (and their metadata) of a listing in a submission.
+ * @param submissionResource
+ * @param listingPath
+ */
+function updateListingImages(submissionResource: any, listing: string)
+{
+    tl.debug(`Obtaining images for language ${listing}`);
+
+    var listingPath = path.join(taskParams.metadataRoot, listing);
+
+    var base = submissionResource.listings[listing].baseListing;
+    if (base != undefined)
+    {
+        if (base.images == undefined)
         {
             base.images = [];
         }
-        tl.debug(`Updating images from ${listingAbsPath}`);
-        updateImageMetadata(base.images, path.join(listingAbsPath, 'baseListing', 'images'));
+        tl.debug(`Updating images from ${listingPath}`);
+        updateImageMetadata(base.images, path.join(listingPath, 'baseListing', 'images'));
+    }
 
-        // Do the same for all the platform overrides
-        for (var platOverride in submissionResource.listings[listing].platformOverrides)
+    // Do the same for all the platform overrides
+    for (var platOverride in submissionResource.listings[listing].platformOverrides)
+    {
+        var platPath = path.join(listingPath, 'platformOverrides', platOverride, 'images');
+        var platOverrideRef = submissionResource.listings[listing].platformOverrides[platOverride];
+        if (platOverrideRef.images == undefined)
         {
-            var platPath = path.join(listingAbsPath, 'platformOverrides', platOverride, 'images');
-            var platOverrideRef = submissionResource.listings[listing].platformOverrides[platOverride];
-            if (platOverrideRef.images === undefined)
-            {
-                platOverrideRef.images = [];
-            }
-            tl.debug(`Updating platform override images from ${platPath}`);
-            updateImageMetadata(platOverrideRef.images, platPath);
+            platOverrideRef.images = [];
         }
+        tl.debug(`Updating platform override images from ${platPath}`);
+        updateImageMetadata(platOverrideRef.images, platPath);
     }
 }
+
 
 /**
  * Construct a listing whose root is in the given path. This listing includes a base listing and
@@ -846,7 +867,7 @@ function requireAbsoluteOrRelative(aPath: string): any
  * @param source
  * @param ignoreCase
  */
-function mergeObjects(dest: any, source: any, ignoreCase: boolean = true): void
+function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
 {
     var destPropsCaseMapping = {};
     if (ignoreCase)
