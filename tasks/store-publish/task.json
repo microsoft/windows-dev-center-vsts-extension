@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "6",
-        "Patch": "850"
+        "Patch": "855"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Publish $(packagePath)",
@@ -82,6 +82,15 @@
             "label": "Metadata root folder",
             "defaultValue": "",
             "helpMarkDown": "Path to a directory containing the metadata. Consult the documentation for the expected format.",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod != NoUpdate"
+        },
+        {
+            "name": "updateImages",
+            "type": "boolean",
+            "label": "Update images",
+            "defaultValue": false,
+            "helpMarkDown": "Whether images should also be updated. **Warning**: if you check this box, all the old images of the listings you provide will be deleted.",
             "required": true,
             "visibleRule": "metadataUpdateMethod != NoUpdate"
         },

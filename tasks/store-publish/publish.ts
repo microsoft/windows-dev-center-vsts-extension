@@ -62,6 +62,11 @@ export interface CorePublishParams
      */
     metadataRoot?: string;
 
+    /**
+     * Whether images should also be updated when a submission updates metadata.
+     */
+    updateImages: boolean;
+
     /** A list of paths to the packages to be uploaded. */
     packages: string[];
 
@@ -348,7 +353,10 @@ function updateMetadata(submissionResource: any): void
     {
         updateListingAttributes(submissionResource, listing);
 
-        updateListingImages(submissionResource, listing);
+        if (taskParams.updateImages)
+        {
+            updateListingImages(submissionResource, listing);
+        }
     });
 }
 

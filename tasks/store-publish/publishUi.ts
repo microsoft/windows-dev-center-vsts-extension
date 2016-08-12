@@ -37,7 +37,8 @@ function gatherParams()
         authentication : credentials,
         endpoint : endpointUrl,
         force : tl.getBoolInput('force', true),
-        metadataUpdateType : pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
+        metadataUpdateType: pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
+        updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : []
     };
@@ -126,6 +127,7 @@ function dumpParams(taskParams: pub.PublishParams): void
     tl.debug(`Endpoint: ${taskParams.endpoint}`);
     tl.debug(`Force delete: ${taskParams.force}`);
     tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
+    tl.debug(`Update images: ${taskParams.updateImages}`);
     tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
 }
