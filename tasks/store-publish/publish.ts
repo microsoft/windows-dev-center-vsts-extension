@@ -135,9 +135,9 @@ export async function publishTask(params: PublishParams)
 {
     taskParams = params;
 
-    /* We expect the endpoint part of this to have a slash at the end.
-     * This is because authenticating to 'endpoint' will give us an
-     * invalid token, while authenticating to 'endpoint/' will work */
+    /* We expect the endpoint part of this to not have a slash at the end.
+     * This is because authenticating to 'endpoint/' will give us an
+     * invalid token, while authenticating to 'endpoint' will work */
     ROOT = taskParams.endpoint + API_URL_VERSION_PART;
 
     console.log('Authenticating...');

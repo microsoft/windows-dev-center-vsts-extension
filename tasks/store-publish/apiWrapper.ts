@@ -237,36 +237,16 @@ export function withRetry<T>(
         if (numRetries > 0 && (!errPredicate || errPredicate(err)))
         {
             console.log(`Operation failed with ${err}`);
-            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries} retrie(s) left)`);
+            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
             return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
         }
         else
         {
+            /* Don't wrap err in an error because it's already an error
+            (.fail() is the equivalent of "catch" for promises) */
             throw err;
         }
     });
-
-    /*while (numRetries >= 0)
-    {
-        try
-        {
-            return await promiseGenerator();
-        }
-        catch (err)
-        {
-            console.log(`Operation failed with ${err}`);
-            if (numRetries > 0 && (!callback || callback(err)))
-            {
-                console.log(`Retrying... (${numRetries} retrie(s) left)`);
-                numRetries--;
-                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-            }
-            else
-            {
-                throw err;
-            }
-        }
-    }*/
 }
 
 /** 

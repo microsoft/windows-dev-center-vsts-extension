@@ -121,7 +121,7 @@ function dumpParams(taskParams: pub.PublishParams): void
     }
     else
     {
-        tl.debug(`App ID: ${taskParams.appName}`);
+        tl.debug(`App name: ${taskParams.appName}`);
     }
 
     tl.debug(`Endpoint: ${taskParams.endpoint}`);
