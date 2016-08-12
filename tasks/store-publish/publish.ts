@@ -638,7 +638,7 @@ function addPackagesToZip(packages: string[], zip: JSZip): void
     packages.forEach((aPath, i) =>
     {
         // According to JSZip documentation, the directory separator used is a forward slash.
-        var entry = makePackageEntry(aPath, i).replace('\\', '/');
+        var entry = makePackageEntry(aPath, i).replace(/\\/g, '/');
         tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
         zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
     });
@@ -670,7 +670,7 @@ function addImagesToZipFromListing(images: any[], zip: JSZip)
     {
         var imgPath = path.join(taskParams.metadataRoot, image.fileName);
         // According to JSZip documentation, the directory separator used is a forward slash.
-        var filenameInZip = image.fileName.replace('\\', '/');
+        var filenameInZip = image.fileName.replace(/\\/g, '/');
         tl.debug(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
         zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
     });
@@ -711,7 +711,7 @@ function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
      * distinguish between 'correct' uses of those characters, and their spurious instances in
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
-    var dest = /*submissionResource.fileUploadUrl*/ blobUrl.replace(/\+/g, '%2B');
+    var dest = blobUrl.replace(/\+/g, '%2B');
     tl.debug(`Uploading zip file to ${dest}`);
 
     /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
@@ -924,7 +924,7 @@ function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
 /** Split a string on both '\n' and '\r\n', removing empty or whitespace entries. */
 function splitAnyNewline(str: string): string[]
 {
-    return str.replace('\r\n', '\n').split('\n').filter(s => s.trim().length > 0);
+    return str.replace(/\r\n/g, '\n').split('\n').filter(s => s.trim().length > 0);
 }
 
 
