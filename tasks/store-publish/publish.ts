@@ -347,7 +347,7 @@ function updateMetadata(submissionResource: any): void
 
         // Merge the existing listing object with the new listing made from the given path
         // Overrides are also checked in the makeListing call.
-        mergeObjects(submissionResource.listings[listingPath], makeListing(listingAbsPath, submissionResource.listings[listingPath]));
+        mergeObjects(submissionResource.listings[listingPath], makeListing(listingAbsPath));
     });
 
     // Update images from listings
@@ -383,7 +383,7 @@ function updateMetadata(submissionResource: any): void
  * potentially some platform overrides.
  * @param listingPath
  */
-function makeListing(listingAbsPath: string, languageJsonObj: any): any
+function makeListing(listingAbsPath: string): any
 {
     var baseListing = undefined;
     var platformOverrides = undefined;
@@ -393,7 +393,7 @@ function makeListing(listingAbsPath: string, languageJsonObj: any): any
     if (existsAndIsDir(basePath))
     {
         tl.debug('Obtaining base listing');
-        baseListing = getListingAttributes(basePath, languageJsonObj.baseListing);
+        baseListing = getListingAttributes(basePath);
     }
     
 
@@ -410,7 +410,7 @@ function makeListing(listingAbsPath: string, languageJsonObj: any): any
         {
             var overridePath = path.join(overridesPath, overrideDir);
             console.log(`Obtaining platform override ${overridePath}`);
-            platformOverrides[overrideDir] = getListingAttributes(overridePath, languageJsonObj.platformOverrides);
+            platformOverrides[overrideDir] = getListingAttributes(overridePath);
         });
     }
 
@@ -439,7 +439,7 @@ function makeListing(listingAbsPath: string, languageJsonObj: any): any
  * of the file will be the attribute and the contents will be the value.
  * @param listingPath
  */
-function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
+function getListingAttributes(listingWithPlatAbsPath: string): any
 {
     var listing = {};
 
@@ -454,35 +454,20 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
     }
     else
     {
-        // Mapping from all-lowercase prop. names to their real casing in the json object
-        var jsonPropCaseMapping = {};
-        for (var prop in jsonObj)
-        {
-            jsonPropCaseMapping[prop.toLowerCase()] = prop;
-        }
-
         var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
             fs.statSync(path.join(listingWithPlatAbsPath, p)).isFile() &&
             path.extname(p) == '.txt');
 
         propFiles.forEach(propPath =>
         {
-            /* If this filename compares case-insensitive to an existing property, set
-             * that particular property. Preserve the name if the property does not exist already.*/
-            var originalPropName = path.basename(propPath, '.txt'); 
-            var normalizedPropertyName = originalPropName.toLocaleLowerCase();
-            if (jsonPropCaseMapping[normalizedPropertyName] != undefined)
-            {
-                originalPropName = jsonPropCaseMapping[normalizedPropertyName];
-            }
-
             // Obtain the contents of the file as the value of the property
             var txtPath = path.join(listingWithPlatAbsPath, propPath);
             console.log(`Loading individual listing attribute from ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
             // Based on whether this is an array or string attribute, split or not.
-            listing[originalPropName] = STRING_ARRAY_ATTRIBUTES[normalizedPropertyName] ? splitAnyNewline(contents) : contents;
+            var propName = path.basename(propPath, '.txt'); 
+            listing[propName] = STRING_ARRAY_ATTRIBUTES[propName.toLowerCase()] ? splitAnyNewline(contents) : contents;
         });
 
     }
@@ -841,33 +826,54 @@ function requireAbsoluteOrRelative(aPath: string): any
  * mergeObjects(x, x) and mergeObjects(x, undefined) have no effect on x
  * If a === {}, then after mergeObjects(a, x), we have a === x
  *
+ * The effect of ignoreCase is exemplified thus:
+ *   mergeObjects( { ABC: 1 }, { abc: 2 }, true) -> dest is { ABC: 2 }          // case ignored
+ *   mergeObjects( { ABC: 1 }, { abc: 2 }, false) -> dest is { ABC: 1, abc: 2 } // case preserved
+ *
  * @param dest
  * @param source
+ * @param ignoreCase
  */
-function mergeObjects(dest: any, source: any): void
+function mergeObjects(dest: any, source: any, ignoreCase: boolean = true): void
 {
-    for (var prop in source)
+    var destPropsCaseMapping = {};
+    if (ignoreCase)
     {
-        if (!dest[prop])
+        for (var prop in dest)
         {
-            dest[prop] = source[prop];
+            destPropsCaseMapping[prop.toLowerCase()] = prop;
         }
-        else if (typeof source[prop] != 'undefined')
+    }
+
+    for (var sourceProp in source)
+    {
+        var destProp = sourceProp;
+        if (ignoreCase && destPropsCaseMapping[sourceProp.toLowerCase()] != undefined)
         {
-            if (typeof dest[prop] != typeof source[prop])
+            destProp = destPropsCaseMapping[sourceProp.toLowerCase()];
+        }
+
+
+        if (!dest[destProp])
+        {
+            dest[destProp] = source[sourceProp];
+        }
+        else if (typeof source[sourceProp] != 'undefined')
+        {
+            if (typeof dest[destProp] != typeof source[sourceProp])
             {
-                var error = `Could not merge objects: conflicting types for property ${prop}: `
-                    + `source has type ${typeof source[prop]}, but dest has type ${typeof dest[prop]}`;
+                var error = `Could not merge objects: conflicting types for property ${sourceProp}: `
+                    + `source has type ${typeof source[sourceProp]}, but dest has type ${typeof dest[destProp]}`;
                 throw new Error(error);
             }
 
-            if (typeof dest[prop] == 'object' && !Array.isArray(dest[prop]))
+            if (typeof dest[destProp] == 'object' && !Array.isArray(dest[destProp]))
             {
-                mergeObjects(dest[prop], source[prop]);
+                mergeObjects(dest[destProp], source[sourceProp], ignoreCase);
             }
             else
             {
-                dest[prop] = source[prop];
+                dest[destProp] = source[sourceProp];
             }
         }
     }
