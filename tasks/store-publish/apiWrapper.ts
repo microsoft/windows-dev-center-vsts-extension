@@ -15,7 +15,7 @@ import request = require('request');
 const RETRY_DELAY = 5000;
 
 /** After how long should a connection be given up (in ms). */
-const TIMEOUT = 30000;
+const TIMEOUT = 180000;
 
 /** Credentials used to gain access to a particular resource. */
 export interface Credentials

@@ -869,6 +869,7 @@ function requireAbsoluteOrRelative(aPath: string): any
  */
 function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
 {
+    ignoreCase = ignoreCase == undefined ? true : ignoreCase;
     var destPropsCaseMapping = {};
     if (ignoreCase)
     {
@@ -912,10 +913,10 @@ function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
     }
 }
 
-/** Split a string on both '\n' and '\r\n', removing empty entries. */
+/** Split a string on both '\n' and '\r\n', removing empty or whitespace entries. */
 function splitAnyNewline(str: string): string[]
 {
-    return str.replace('\r\n', '\n').split('\n').filter(s => s.length > 0);
+    return str.replace('\r\n', '\n').split('\n').filter(s => s.trim().length > 0);
 }
 
 
