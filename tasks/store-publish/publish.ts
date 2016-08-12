@@ -135,8 +135,10 @@ export async function publishTask(params: PublishParams)
      * invalid token, while authenticating to 'endpoint/' will work */
     ROOT = taskParams.endpoint + API_URL_VERSION_PART;
 
+    console.log('Authenticating...');
     currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
 
+    console.log('Obtaining app information...');
     var appResource = await getAppResource();
 
     appId = appResource.id; // Globally set app ID for future steps.
@@ -144,12 +146,17 @@ export async function publishTask(params: PublishParams)
     // Delete pending submission if force is turned on (only one pending submission can exist)
     if (taskParams.force && appResource.pendingApplicationSubmission != undefined)
     {
+        console.log('Deleting existing submission...');
         await deleteSubmission(appResource.pendingApplicationSubmission.resourceLocation);
     }
 
+    console.log('Creating submission...');
     var submissionResource = await createSubmission();
+
+    console.log('Updating submission...');
     await putMetadata(submissionResource);
 
+    console.log('Creating zip file...');
     var zip = createZip(taskParams.packages, submissionResource);
     // There might be no files in the zip if the user didn't supply any packages or images.
     // If there are files, write the file locally and also upload it.
@@ -157,10 +164,14 @@ export async function publishTask(params: PublishParams)
     {
         var buf: Buffer = createZipBuffer(zip);
         fs.writeFileSync(taskParams.zipFilePath, buf);
+        console.log('Uploading zip file...');
         await uploadZip(buf, submissionResource.fileUploadUrl);
     }
 
+    console.log('Committing submission...');
     await commit(submissionResource.id);
+
+    console.log('Polling submission...');
     await pollSubmissionStatus(submissionResource.id);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
@@ -764,7 +775,9 @@ function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
         /* Once the previous request has finished, examine the body to tell if we should start a new one. */
         if (!body.status.endsWith('Failed'))
         {
+            var msg = statusMsg + body.status
             tl.debug(statusMsg + body.status);
+            console.log(msg);
 
             /* In immediate mode, we expect to get all the way to "Published" status.
              * In other modes, we stop at "Release" status. */
