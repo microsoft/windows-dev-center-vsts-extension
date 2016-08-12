@@ -420,7 +420,7 @@ function makeListing(listingAbsPath: string): any
         allOverrideDirs.forEach(overrideDir =>
         {
             var overridePath = path.join(overridesPath, overrideDir);
-            console.log(`Obtaining platform override ${overridePath}`);
+            tl.debug(`Obtaining platform override ${overridePath}`);
             platformOverrides[overrideDir] = getListingAttributes(overridePath);
         });
     }
@@ -473,7 +473,7 @@ function getListingAttributes(listingWithPlatAbsPath: string): any
         {
             // Obtain the contents of the file as the value of the property
             var txtPath = path.join(listingWithPlatAbsPath, propPath);
-            console.log(`Loading individual listing attribute from ${txtPath}`);
+            tl.debug(`Loading individual listing attribute from ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
             // Based on whether this is an array or string attribute, split or not.
@@ -610,7 +610,7 @@ function addPackagesToZip(packages: string[], zip: JSZip): void
     {
         // According to JSZip documentation, the directory separator used is a forward slash.
         var entry = makePackageEntry(aPath, i).replace('\\', '/');
-        console.log(`Adding package path ${aPath} to zip as ${entry}`);
+        tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
         zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
     });
 }
@@ -622,13 +622,13 @@ function addImagesToZip(submissionResource: any, zip: JSZip)
 {
     for (var listingKey in submissionResource.listings)
     {
-        console.log(`Adding images for listing ${listingKey}`);
+        tl.debug(`Adding images for listing ${listingKey}`);
         var listing = submissionResource.listings[listingKey];
         addImagesToZipFromListing(listing.baseListing.images, zip);
 
         for (var platOverrideKey in listing.platformOverrides)
         {
-            console.log(`Adding images for platform override ${listingKey}/${platOverrideKey}`);
+            tl.debug(`Adding images for platform override ${listingKey}/${platOverrideKey}`);
             var platOverride = listing.platformOverrides[platOverrideKey];
             addImagesToZipFromListing(platOverride.images, zip);
         }
@@ -642,7 +642,7 @@ function addImagesToZipFromListing(images: any[], zip: JSZip)
         var imgPath = path.join(taskParams.metadataRoot, image.fileName);
         // According to JSZip documentation, the directory separator used is a forward slash.
         var filenameInZip = image.fileName.replace('\\', '/');
-        console.log(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
+        tl.debug(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
         zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
     });
 }
@@ -683,7 +683,7 @@ function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
     var dest = /*submissionResource.fileUploadUrl*/ blobUrl.replace(/\+/g, '%2B');
-    console.log(`Uploading to ${dest}`);
+    tl.debug(`Uploading zip file to ${dest}`);
 
     /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
      * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the zip is
@@ -713,7 +713,6 @@ function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
  */
 function commit(submissionId: string): Q.Promise<void>
 {
-    console.log('Committing submission...');
     var requestParams = {
         url: ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
         method: 'POST'
