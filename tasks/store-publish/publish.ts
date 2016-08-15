@@ -3,8 +3,8 @@
  * and publishes to the Store.
  */
 
-/// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/jszip/index.d.ts" />
+/// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
@@ -651,15 +651,23 @@ function addImagesToZip(submissionResource: any, zip: JSZip)
 {
     for (var listingKey in submissionResource.listings)
     {
-        tl.debug(`Adding images for listing ${listingKey}`);
+        tl.debug(`Checking for new images in listing ${listingKey}...`);
         var listing = submissionResource.listings[listingKey];
-        addImagesToZipFromListing(listing.baseListing.images, zip);
+
+        if (listing.baseListing.images)
+        {
+            addImagesToZipFromListing(listing.baseListing.images, zip);
+        }
 
         for (var platOverrideKey in listing.platformOverrides)
         {
-            tl.debug(`Adding images for platform override ${listingKey}/${platOverrideKey}`);
+            tl.debug(`Checking for new images in platform override ${listingKey}/${platOverrideKey}...`);
             var platOverride = listing.platformOverrides[platOverrideKey];
-            addImagesToZipFromListing(platOverride.images, zip);
+
+            if (platOverride.images)
+            {
+                addImagesToZipFromListing(platOverride.images, zip);
+            }
         }
     }
 }
