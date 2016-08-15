@@ -3,19 +3,27 @@
  */
 
 /// <reference path="../../typings/globals/form-data/index.d.ts" />
-/// <reference path="../../typings/globals/request/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/node-uuid-base/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/node-uuid-cjs/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/index.d.ts" />
 /// <reference path="../../typings/globals/q/index.d.ts" />
+/// <reference path="../../typings/globals/request/index.d.ts" />
 
 import http = require('http'); // Only used for types
 
+import uuid = require('node-uuid');
 import Q = require('q');
 import request = require('request');
+var streamifier = require('streamifier'); // streamifier has no typings
 
 /** How long to wait between retries (in ms) */
 const RETRY_DELAY = 5000;
 
 /** After how long should a connection be given up (in ms). */
 const TIMEOUT = 180000;
+
+/** Block size of chunks uploaded to the blob (in bytes). */
+const UPLOAD_BLOCK_SIZE_BYTES = 1024 * 1024; // 1Mb
 
 /** Credentials used to gain access to a particular resource. */
 export interface Credentials
@@ -249,6 +257,97 @@ export function withRetry<T>(
     });
 }
 
+export function uploadAzureFile(fileContents: Buffer, blobUrl: string): Q.Promise<void>
+{
+    return uploadAzureFileBlocks(fileContents, blobUrl).then(blockList =>
+    {
+        console.log(blockList);
+
+        var options = {
+            url: blobUrl + '&comp=blocklist',
+            body: blockList,
+            method: 'PUT'
+        }
+
+        return performRequest<void>(options);
+    });
+}
+
+/**
+ * Uploads a file chunk by chunk to the given Azure blob.
+ * @return A promise for the list of chunks uploaded, in a format understood by the Azure API
+ */
+function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise<string>
+{
+    var requestParams = {
+        headers: {
+            'x-ms-blob-type': 'BlockBlob'
+        }
+    }
+    var deferred = Q.defer<string>();
+
+    var numBlocks = Math.ceil(fileContents.length / UPLOAD_BLOCK_SIZE_BYTES);
+    const fileGuid = uuid.v4().replace(/\-/g, '');
+    var currentBlockId = 0;
+    var numBlocksFinished = 0;
+
+    // This XML is a flat structure so we can get away with just dealing with strings
+    var blockListXml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
+
+    var fileStream = streamifier.createReadStream(fileContents);
+    fileStream.on('readable', () =>
+    {
+        var block: string | Buffer;
+
+        // Read the buffer in 1 MB blocks
+        while ((block = fileStream.read(1024 * 1024)) !== null)
+        {
+            var thisBlockId = currentBlockId++;
+
+            requestParams.headers['content-length'] = block.length;
+
+            // Sequence number with leading zeros.
+            // Note: will not work if we need more than a million blocks
+            // Note 2: with current block size, a million blocks is one terabyte.
+            var sequence = ('000000' + thisBlockId).substr(-6);
+            var base64Id = new Buffer(sequence).toString('base64');
+            var thisBlockUrl = blobUrl + '&comp=block&blockid=' + base64Id;
+
+            blockListXml += '<Latest>' + base64Id + '</Latest>';
+
+            console.log(`\tUploading block ${thisBlockId} (ID ${base64Id})`);
+
+            /* When doing a multipart form request, the request module erroneously (?) adds some headers like
+             * content-disposition to the __contents__ of the data, which corrupts the file. Therefore we have
+             * to use this instead, where the block is piped from a stream to the put request. */
+            streamifier.createReadStream(block)
+                .pipe(request.put(thisBlockUrl, requestParams, function (err, resp, body)
+                {
+                    if (err)
+                    {
+                        deferred.reject(err);
+                    }
+                    else if (resp.statusCode >= 400)
+                    {
+                        deferred.reject(new Error(`Status: ${resp.statusCode}. Body: ${JSON.stringify(body)}`));
+                    }
+                    else
+                    {
+                        console.log(`\tUploaded block ${thisBlockId} (ID ${base64Id})`);
+                        numBlocksFinished++;
+                        if (numBlocksFinished == numBlocks)
+                        {
+                            deferred.resolve(blockListXml + '</BlockList>');
+                        }
+                    }
+                }));
+        }
+    });
+
+    return deferred.promise;
+}
+
+
 /** 
  * Examines a response body and logs errors and warnings.
  * @param body A body in the format given by the Store API
@@ -269,3 +368,4 @@ function logErrorsAndWarnings(body: any)
         (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
     }
 }
+

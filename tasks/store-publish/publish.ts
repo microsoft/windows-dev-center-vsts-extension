@@ -17,7 +17,6 @@ import os = require('os');
 import JSZip = require('jszip');
 import Q = require('q');
 import request = require('request');
-var streamifier = require('streamifier'); // streamifier has no typings
 import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
@@ -700,49 +699,25 @@ function createZipBuffer(zip: JSZip): Buffer
 }
 
 /**
- * Creates and uploads a zip file to the appropriate blob.
+ * Uploads a zip file to the appropriate blob.
  * @param zip A buffer containing the zip file
  * @return A promise for the upload of the zip file.
  */
 function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
 {
-    var requestParams = {
-        headers: {
-            'Content-Length': zip.length,
-            'x-ms-blob-type': 'BlockBlob'
-        }
-    }
-    var deferred = Q.defer<void>();
-    
+    tl.debug(`Uploading zip file to ${blobUrl}`);
+
     /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
      * base64 parameter. There is no good way to fix this, because we don't really know how to
      * distinguish between 'correct' uses of those characters, and their spurious instances in
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
     var dest = blobUrl.replace(/\+/g, '%2B');
-    tl.debug(`Uploading zip file to ${dest}`);
 
-    /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
-     * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the zip is
-     * piped from a stream to the put request. */
-    streamifier.createReadStream(zip).pipe(request.put(dest, requestParams, function (err, resp, body)
-    {
-        if (err)
-        {
-            deferred.reject(err);
-        }
-        else if (resp.statusCode >= 400)
-        {
-            deferred.reject(new Error('Status code: ' + resp.statusCode + '. Body: ' + JSON.stringify(body)));
-        }
-        else
-        {
-            deferred.resolve();
-        }
-    }));
-
-    return deferred.promise;
+    return api.uploadAzureFile(zip, dest);
 }
+
+
 
 /**
  * Commits a submission, checking for any errors.
