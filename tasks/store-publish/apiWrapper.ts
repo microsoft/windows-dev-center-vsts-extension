@@ -299,8 +299,7 @@ function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise
     {
         var block: string | Buffer;
 
-        // Read the buffer in 1 MB blocks
-        while ((block = fileStream.read(1024 * 1024)) !== null)
+        while ((block = fileStream.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
         {
             var thisBlockId = currentBlockId++;
 
@@ -310,7 +309,7 @@ function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise
             // Note: will not work if we need more than a million blocks
             // Note 2: with current block size, a million blocks is one terabyte.
             var sequence = ('000000' + thisBlockId).substr(-6);
-            var base64Id = new Buffer(sequence).toString('base64');
+            var base64Id = new Buffer(fileGuid + '-' + sequence).toString('base64');
             var thisBlockUrl = blobUrl + '&comp=block&blockid=' + base64Id;
 
             blockListXml += '<Latest>' + base64Id + '</Latest>';
