@@ -10,6 +10,7 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "del": "^2.2.2",
     "gulp": "^3.9.1",
     "gulp-tsc": "^1.2.0",
     "shelljs": "^0.7.3",

@@ -1,12 +1,17 @@
 var exec = require('child_process').exec;
 
 var argv = require('yargs').argv;
+var del = require('del');
 var gulp = require('gulp');
 var tsc = require('gulp-tsc');
 
 
 var EXTENSION_MANIFEST = 'vss-extension.json';
 var BUILD_DIR = 'build/';
+
+gulp.task('clean', function () {
+    return del([BUILD_DIR + '**/*']);
+});
 
 gulp.task('compile', ['task-dependencies'], function () {
     var tsconfig = require('./tsconfig.json').compilerOptions;
@@ -55,6 +60,5 @@ gulp.task('package', ['compile', 'task-metadata', 'extension-metadata', 'task-de
 
     exec(cmd, callback);
 });
-
 
 gulp.task('default', ['package']);
