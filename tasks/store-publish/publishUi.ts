@@ -142,8 +142,12 @@ async function main()
     }
     catch (err)
     {
-        tl.error(err);
-        tl.error(err.stack);
+        if (err.stack != undefined)
+        {
+            tl.error(err.stack);
+        }
+
+        // This will also log the error for us.
         tl.setResult(tl.TaskResult.Failed, err);
     }
 }

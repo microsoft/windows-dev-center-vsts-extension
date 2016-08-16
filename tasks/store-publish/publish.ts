@@ -113,6 +113,12 @@ const STRING_ARRAY_ATTRIBUTES =
     };
 
 /**
+ * The message used when a commit fails. Note that this does not need to be very
+ * informative since the user will see more details in additional messages.
+ */
+const COMMIT_FAILED_MSG = 'Commit failed';
+
+/**
  * A little part of the URL to the API that contains a version number.
  * This may need to be updated in the future to comply with the API.
  */
@@ -753,7 +759,10 @@ function commit(submissionId: string): Q.Promise<void>
 function pollSubmissionStatus(submissionId: string): Q.Promise<void>
 {
     var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
-    return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err => !is400Error(err)).then(status =>
+    return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
+        // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
+        !(is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
+        then(status =>
     {
         if (status)
         {
@@ -770,7 +779,7 @@ function pollSubmissionStatus(submissionId: string): Q.Promise<void>
 function is400Error(err): boolean
 {
     // Does this look like a ResponseInformation?
-    if (err.response != undefined && typeof err.response.statusCode == 'number')
+    if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
     {
         return err.response.statusCode >= 400
             && err.response.statusCode < 500
@@ -816,7 +825,7 @@ function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
                 var errDetail = body.statusDetails.errors[i];
                 tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
             }
-            throw new Error('Commit failed');
+            throw new Error(COMMIT_FAILED_MSG);
         }
     });
 }
