@@ -101,6 +101,9 @@ var ROOT: string;
 /** The delay between requests when polling for the submission status, in miliseconds. */
 const POLL_DELAY = 10000;
 
+/** How many times should we retry. */
+const NUM_RETRIES = 5;
+
 /** The following attributes are considered as lists of strings and not just strings. */
 const STRING_ARRAY_ATTRIBUTES =
     {
@@ -318,7 +321,9 @@ function putMetadata(submissionResource: any): Q.Promise<void>
     };
 
     tl.debug(`Performing metadata update`);
-    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
+
+    var putGenerator = () => api.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return api.withRetry(NUM_RETRIES, putGenerator, err => !is400Error(err));
 }
 
 /**
@@ -748,7 +753,7 @@ function commit(submissionId: string): Q.Promise<void>
 function pollSubmissionStatus(submissionId: string): Q.Promise<void>
 {
     var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
-    return api.withRetry(5, submissionCheckGenerator, err => !is400Error(err)).then(status =>
+    return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err => !is400Error(err)).then(status =>
     {
         if (status)
         {
