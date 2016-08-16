@@ -3,7 +3,6 @@
  * and publishes to the Store.
  */
 
-/// <reference path="../../typings/globals/jszip/index.d.ts" />
 /// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
@@ -14,9 +13,10 @@ import fs = require('fs');
 import path = require('path');
 import os = require('os');
 
-import JSZip = require('jszip');
+var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
 import request = require('request');
+import stream = require('stream');
 import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
@@ -166,10 +166,17 @@ export async function publishTask(params: PublishParams)
     // If there are files, write the file locally and also upload it.
     if (Object.keys(zip.files).length > 0)
     {
-        var buf: Buffer = createZipBuffer(zip);
-        fs.writeFileSync(taskParams.zipFilePath, buf);
+        var buf: NodeJS.ReadableStream = createZipStream(zip);
+
+        /* We want to pipe the zip stream to two different streams, since uploading the zip
+           attaches events to the stream itself. */
+        var netPassthrough = new stream.PassThrough();
+
+        buf.pipe(fs.createWriteStream(taskParams.zipFilePath));
+
         console.log('Uploading zip file...');
-        await uploadZip(buf, submissionResource.fileUploadUrl);
+        buf.pipe(netPassthrough)
+        await uploadZip(netPassthrough, submissionResource.fileUploadUrl);
     }
 
     console.log('Committing submission...');
@@ -615,7 +622,7 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
  * Create a zip file containing the information 
  * @param submissionResource
  */
-function createZip(packages: string[], submissionResource: any): JSZip
+function createZip(packages: string[], submissionResource: any)
 {
     tl.debug(`Creating zip file`);
     var zip = new JSZip();
@@ -630,7 +637,7 @@ function createZip(packages: string[], submissionResource: any): JSZip
  * package in this list. This is to prevent name collisions.
  * @see makePackageEntry
  */
-function addPackagesToZip(packages: string[], zip: JSZip): void
+function addPackagesToZip(packages: string[], zip): void
 {
     var currentFiles = {};
 
@@ -646,7 +653,7 @@ function addPackagesToZip(packages: string[], zip: JSZip): void
 /**
  * Add any PendingUpload images in the given submission resource to the given zip file.
  */
-function addImagesToZip(submissionResource: any, zip: JSZip)
+function addImagesToZip(submissionResource: any, zip)
 {
     for (var listingKey in submissionResource.listings)
     {
@@ -671,7 +678,7 @@ function addImagesToZip(submissionResource: any, zip: JSZip)
     }
 }
 
-function addImagesToZipFromListing(images: any[], zip: JSZip)
+function addImagesToZipFromListing(images: any[], zip)
 {
     images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
     {
@@ -686,7 +693,7 @@ function addImagesToZipFromListing(images: any[], zip: JSZip)
 /**
  * Creates a buffer to the given zip file.
  */
-function createZipBuffer(zip: JSZip): Buffer
+function createZipStream(zip): NodeJS.ReadableStream
 {
     var zipGenerationOptions = {
         base64: false,
@@ -695,7 +702,7 @@ function createZipBuffer(zip: JSZip): Buffer
         streamFiles: true
     };
 
-    return zip.generate(zipGenerationOptions);
+    return zip.generateNodeStream(zipGenerationOptions);
 }
 
 /**
@@ -703,7 +710,7 @@ function createZipBuffer(zip: JSZip): Buffer
  * @param zip A buffer containing the zip file
  * @return A promise for the upload of the zip file.
  */
-function uploadZip(zip: Buffer, blobUrl: string): Q.Promise<void>
+function uploadZip(zip: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
 {
     tl.debug(`Uploading zip file to ${blobUrl}`);
 

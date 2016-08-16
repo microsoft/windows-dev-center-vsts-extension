@@ -257,7 +257,7 @@ export function withRetry<T>(
     });
 }
 
-export function uploadAzureFile(fileContents: Buffer, blobUrl: string): Q.Promise<void>
+export function uploadAzureFile(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
 {
     return uploadAzureFileBlocks(fileContents, blobUrl).then(blockList =>
     {
@@ -277,7 +277,7 @@ export function uploadAzureFile(fileContents: Buffer, blobUrl: string): Q.Promis
  * Uploads a file chunk by chunk to the given Azure blob.
  * @return A promise for the list of chunks uploaded, in a format understood by the Azure API
  */
-function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise<string>
+function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<string>
 {
     var requestParams = {
         headers: {
@@ -286,7 +286,7 @@ function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise
     }
     var deferred = Q.defer<string>();
 
-    var numBlocks = Math.ceil(fileContents.length / UPLOAD_BLOCK_SIZE_BYTES);
+    var numBlocks: number;
     const fileGuid = uuid.v4().replace(/\-/g, '');
     var currentBlockId = 0;
     var numBlocksFinished = 0;
@@ -294,12 +294,11 @@ function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise
     // This XML is a flat structure so we can get away with just dealing with strings
     var blockListXml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
 
-    var fileStream = streamifier.createReadStream(fileContents);
-    fileStream.on('readable', () =>
+    fileContents.on('readable', () =>
     {
         var block: string | Buffer;
 
-        while ((block = fileStream.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
+        while ((block = fileContents.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
         {
             var thisBlockId = currentBlockId++;
 
@@ -336,10 +335,20 @@ function uploadAzureFileBlocks(fileContents: Buffer, blobUrl: string): Q.Promise
                         numBlocksFinished++;
                         if (numBlocksFinished == numBlocks)
                         {
-                            deferred.resolve(blockListXml + '</BlockList>');
+                            deferred.resolve(blockListXml += '</BlockList>');
                         }
                     }
                 }));
+        }
+    }).on('end', () =>
+    {
+        // Once all blocks have been read from the stream, we know how many there were, so update it here.
+        numBlocks = currentBlockId;
+
+        // It could be the case that the end event is emitted only after all web requests are done.
+        if (numBlocksFinished == numBlocks)
+        {
+            deferred.resolve(blockListXml += '</BlockList>');
         }
     });
 

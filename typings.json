@@ -1,7 +1,6 @@
 {
   "globalDependencies": {
     "form-data": "registry:dt/form-data#0.0.0+20160316155526",
-    "jszip": "registry:dt/jszip#0.0.0+20160709055933",
     "node": "registry:dt/node#6.0.0+20160709114037",
     "node-uuid": "registry:dt/node-uuid#0.0.0+20160316155526",
     "node-uuid/node-uuid-base": "registry:dt/node-uuid/node-uuid-base#0.0.0+20160316155526",
