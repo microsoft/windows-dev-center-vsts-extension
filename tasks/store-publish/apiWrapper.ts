@@ -349,7 +349,6 @@ async function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUr
             var blockPromiseGenerator = () => performRequest(requestParams, streamifier.createReadStream(block)).thenResolve(base64Id);
 
             /* Also allow retries. We don't expect Azure to be down. If it is, we should normally have failed in a previous step. */
-             *
             var blockPromise = withRetry(5, blockPromiseGenerator);
             blockPromises.push(blockPromise);
         }
