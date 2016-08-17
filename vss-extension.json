@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
-    "id": "windows-store-publish-test",
-    "version": "0.7.8",
+    "id": "windows-store-publish",
+    "version": "0.7.985",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -48,7 +48,7 @@
             "properties": {
                 "name": "devCenter",
                 "displayName": "Windows Dev Center",
-                "url":  "",
+                "url": "https://manage.devcenter.microsoft.com",
                 "inputDescriptors": [],
                 "authenticationSchemes": [
                     {
@@ -56,14 +56,18 @@
                         "inputDescriptors": [
                             {
                                 "id": "url",
-                                "name": "Server URL",
+                                "name": "Windows Store API URL",
                                 "description":  "Server URL",
                                 "inputMode": "textbox",
-                                "value":  "https://manage.devcenter.microsoft.com",
                                 "isConfidential": false,
                                 "validation": {
                                     "isRequired": true,
                                     "dataType": "string"
+                                },
+                                "values": {
+                                    "inputId": "url",
+                                    "isDisabled": false,
+                                    "defaultValue": "https://manage.devcenter.microsoft.com"
                                 }
                             },
                             {

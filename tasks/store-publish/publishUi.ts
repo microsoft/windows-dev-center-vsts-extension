@@ -10,64 +10,26 @@ import path = require('path');
 
 import tl = require('vsts-task-lib');
 
-/**
- * Gets the value of a path input, and additionally checks that the path is a file. The task
- * fails if the path was not supplied, or if the supplied path is not an existing file.
- */
-function getPathInputAsFile(name: string, required: boolean): string
-{
-    var path = tl.getPathInput(name, required, false);
-    
-    var stat = fs.statSync(path);
-
-    // It's an error if the file was required and stat failed (stat will fail if the path is empty)
-    if (required && !stat)
-    {
-        throw new Error('Parameter error for "' + name + '": cannot access path "' + path + '"');
-    }
-
-    // It's an error if the path is not empty but also not a file.
-    if (path && !stat.isFile())
-    {
-        throw new Error('Parameter error for "' + name + '": path "' + path + '" is not a file');
-    }
-
-    return path;
-}
-
 /** Obtain and validate parameters from task UI. */
 function gatherParams()
 {
     var credentials: api.Credentials;
-    var endpointUrl: string;
+    var endpointId = tl.getInput('serviceEndpoint', true);
 
-    var authType = tl.getInput('authType', true);
-
-    if (authType == 'ServiceEndpoint')
+    /* Contrary to the other tl.get* functions, the boolean param here
+        indicates whether the parameter is __optional__ */
+    var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
+    credentials = 
     {
-        var endpointId = tl.getInput('serviceEndpoint', true);
+        tenant : endpointAuth.parameters['tenantId'],
+        clientId : endpointAuth.parameters['servicePrincipalId'],
+        clientSecret : endpointAuth.parameters['servicePrincipalKey']
+    };
 
-        var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
-        credentials = 
-        {
-            tenant : endpointAuth.parameters['tenantId'],
-            clientId : endpointAuth.parameters['servicePrincipalId'],
-            clientSecret : endpointAuth.parameters['servicePrincipalKey']
-        };
-
-        endpointUrl = endpointAuth.parameters['url'];
-    }
-    else if (authType == "JsonFile")
+    var endpointUrl: string = endpointAuth.parameters['url'];
+    if (endpointUrl.lastIndexOf('/') == endpointUrl.length - 1)
     {
-        var jsonPath = getPathInputAsFile('jsonAuthPath', true);
-        var data = require(jsonPath);
-
-        credentials = data.credentials;
-        endpointUrl = data.endpointUrl;
-    }
-    else
-    {
-        throw new Error('Unsupported authentication method: ' + authType);
+        endpointUrl = endpointUrl.substring(0, endpointUrl.length - 1);
     }
 
     var taskParams: pub.PublishParams = {
@@ -75,25 +37,34 @@ function gatherParams()
         authentication : credentials,
         endpoint : endpointUrl,
         force : tl.getBoolInput('force', true),
-        metadataUpdateType : pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
+        metadataUpdateType: pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
+        updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : []
     };
 
     // Packages
     var packages: string[] = [];
-    packages.push(getPathInputAsFile('packagePath', false));
+    if (inputFilePathSupplied('packagePath', false))
+    {
+        packages.push(tl.getInput('packagePath', false));
+    }
     packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
-    taskParams.packages = packages;
+    taskParams.packages = packages.filter(p => p.trim().length != 0);
 
     // App identification
-    if (tl.getInput('nameType', true) == 'AppId')
+    var nameType = tl.getInput('nameType', true);
+    if (nameType == 'AppId')
     {
         (<pub.ParamsWithAppId>taskParams).appId = tl.getInput('appId', true);
     }
-    else
+    else if (nameType == 'AppName')
     {
         (<pub.ParamsWithAppName>taskParams).appName = tl.getInput('appName', true);
+    }
+    else
+    {
+        throw new Error(`Invalid name type ${nameType}`);
     }
 
     taskParams.metadataRoot = canonicalizePath(tl.getPathInput('metadataPath', false, true));
@@ -102,6 +73,18 @@ function gatherParams()
     return taskParams;
 }
 
+/**
+ * Verifies if the filePath input was supplied by comparing it with the working directory of the release.
+ * 
+ * VSTS will put by default the working directory as the value of an empty filePath input.
+ * @param name The name of the input parameter;
+ * @return true if the path was supplied, false if it is equal to the working directory;
+ */
+function inputFilePathSupplied(name: string, required: boolean) : boolean
+{
+    var path = tl.getInput(name, required);
+    return path != tl.getVariable('Agent.ReleaseDirectory');
+}
 
 /**
  * Creates a canonical version of a path. Separators are converted to the current platform,
@@ -129,15 +112,44 @@ function canonicalizePath(aPath: string): string
     return path.normalize(path.format(pathObj));
 }
 
-/** try...catch will handle sync exceptions that could happen. */
-try
+function dumpParams(taskParams: pub.PublishParams): void
 {
-    console.log('Windows Store Publish');
-    var taskParams: pub.PublishParams = gatherParams();
-    pub.publishTask(taskParams);
+    // We won't log the credentials, as they get masked by VSTS anyways.
+    if (pub.hasAppId(taskParams))
+    {
+        tl.debug(`App ID: ${taskParams.appId}`);
+    }
+    else
+    {
+        tl.debug(`App name: ${taskParams.appName}`);
+    }
+
+    tl.debug(`Endpoint: ${taskParams.endpoint}`);
+    tl.debug(`Force delete: ${taskParams.force}`);
+    tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
+    tl.debug(`Update images: ${taskParams.updateImages}`);
+    tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
+    tl.debug(`Packages: ${taskParams.packages.join(',')}`);
 }
-catch (err)
+
+async function main()
 {
-    tl.error(err);
-    tl.setResult(tl.TaskResult.Failed, err);
+    try
+    {
+        var taskParams: pub.PublishParams = gatherParams();
+        dumpParams(taskParams);
+        await pub.publishTask(taskParams);
+    }
+    catch (err)
+    {
+        if (err.stack != undefined)
+        {
+            tl.error(err.stack);
+        }
+
+        // This will also log the error for us.
+        tl.setResult(tl.TaskResult.Failed, err);
+    }
 }
+
+main();

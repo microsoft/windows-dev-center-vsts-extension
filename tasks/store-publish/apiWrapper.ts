@@ -3,16 +3,27 @@
  */
 
 /// <reference path="../../typings/globals/form-data/index.d.ts" />
-/// <reference path="../../typings/globals/request/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/node-uuid-base/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/node-uuid-cjs/index.d.ts" />
+/// <reference path="../../typings/globals/node-uuid/index.d.ts" />
 /// <reference path="../../typings/globals/q/index.d.ts" />
+/// <reference path="../../typings/globals/request/index.d.ts" />
 
+import http = require('http'); // Only used for types
+
+import uuid = require('node-uuid');
 import Q = require('q');
 import request = require('request');
+var streamifier = require('streamifier'); // streamifier has no typings
 
-export var VERBOSE = false;
-
-/** How long to wait between retries. */
+/** How long to wait between retries (in ms) */
 const RETRY_DELAY = 5000;
+
+/** After how long should a connection be given up (in ms). */
+const TIMEOUT = 180000;
+
+/** Block size of chunks uploaded to the blob (in bytes). */
+const UPLOAD_BLOCK_SIZE_BYTES = 1024 * 1024; // 1Mb
 
 /** Credentials used to gain access to a particular resource. */
 export interface Credentials
@@ -48,64 +59,82 @@ function isExpired(token: AccessToken): boolean
     return (Date.now() / 1000) + 5 > token.expiration;
 }
 
-/** 
- * A callback that expects a non-error response body and a deferred.
- * It should decide whether to resolve or reject the deferred promise
- * based on the body. */
-export interface apiSuccessCallback<T>
+/** All the information given to us by the request module along a response. */
+export class ResponseInformation
 {
-    (body: any, deferred: Q.Deferred<T>): void
+    error: any;
+    response: http.IncomingMessage;
+    body: any;
+
+    constructor(_err: any, _res: http.IncomingMessage, _bod: any) 
+    {
+        this.error = _err;
+        this.response = _res;
+        this.body = _bod;
+    }
+
+    // For friendly logging
+    toString(): string
+    {
+        if (this.error != undefined)
+        {
+            return `Error ${JSON.stringify(this.error)}`;
+        }
+        else
+        {
+
+            var bodyToPrint = this.body;
+            if (typeof bodyToPrint != 'string')
+            {
+                bodyToPrint = JSON.stringify(bodyToPrint);
+            }
+
+            return `Status ${this.response.statusCode}: ${bodyToPrint}`;
+        }
+    }
 }
 
 /**
- * Perform an API request. Provides some default error handling by rejecting its
-   promise if an error in the API call occurs, or the status code returned is an error code.
+ * Perform a request with some default handling.
+ *
+ * For convenience, parses the body if the content-type is 'application/json'.
+ * Further, examines the body and logs any errors or warnings.
+ *
+ * If an transport or application level error occurs, rejects the returned promise.
+ * The reason given is an instance of @ResponseInformation@, containing the error
+ * object, the response and the body.
+ *
+ * If no error occurs, resolves the returned promise with the body.
+ *
  * @param options Options describing the request to execute.
- * @param callback If present, decides whether to resolve or reject the promise based on the reponse body.
- * If it is not present, the promise will be resolved with the body of the response.
  */
-export function performRequest<T>(
-        options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-        callback?: apiSuccessCallback<T>):
+export function performRequest<T>(options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
     Q.Promise<T>
 {
     var deferred = Q.defer<T>();
-    //VERBOSE = true;
-    if (VERBOSE)
+
+    if (options.timeout == undefined)
     {
-        console.log("Performing request:\n" + JSON.stringify(options));
+        options.timeout = TIMEOUT;
     }
 
-    request(options, function (err, resp, body)
+    request(options, function (error, response, body)
     {
+        // For convenience, parse the body if it's JSON.
+        if (response != undefined && // response is undefined if a transport-level error occurs
+            response.headers['content-type'] != undefined &&   // content-type is undefined if there is no content
+            response.headers['content-type'].indexOf('application/json') != -1 &&
+            typeof body == 'string') // body might be an object if the options given to request already parsed it for us
+        {
+            body = JSON.parse(body);
+            logErrorsAndWarnings(body);
+        }
 
-        if (VERBOSE)
+        if (error || (response && response.statusCode >= 400))
         {
-            console.log('Completed with status ' + resp.statusCode);
-            if (typeof body == 'string')
-            {
-                console.log('Body: ' + body + '\n\n');
-            }
-            else
-            {
-                console.log('Body: ' + JSON.stringify(body) + '\n\n');
-            }
+            deferred.reject(new ResponseInformation(error, response, body));
         }
-        if (err) // A transport-level error occurred (i.e. the request could not be completed)
-        {
-            console.log('Error: ' + err);
-            deferred.reject(err);
-        }
-        else if (resp.statusCode >= 400) // An application-level error occurred (i.e. the request was completed, but could not be fulfilled)
-        {
-            console.log('Error ' + resp.statusCode)
-            deferred.reject(body);
-        }
-        else if (callback) // If a callback was provided, defer to it the decision of rejecting or resolving.
-        {
-            callback(body, deferred);
-        }
-        else // If no callback was provided, resolve with the body
+        else
         {
             deferred.resolve(body);
         }
@@ -119,9 +148,8 @@ export function performRequest<T>(
  * @param auth A token used to identify with the resource. If expired, it will be renewed before executing the request.
  */
 export function performAuthenticatedRequest<T>(
-        auth: AccessToken,
-        options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-        callback?: apiSuccessCallback<T>):
+    auth: AccessToken,
+    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
     Q.Promise<T>
 {
     // The expiration check is a function that returns a promise
@@ -157,7 +185,7 @@ export function performAuthenticatedRequest<T>(
                 options.headers['Authorization'] = 'Bearer ' + auth.token;
             }
 
-            return performRequest<T>(options, callback);
+            return performRequest<T>(options);
         });
 }
 
@@ -169,12 +197,11 @@ export function performAuthenticatedRequest<T>(
 export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
 {
     var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
-    var newString = encodeURIComponent(credentials.clientSecret);
     var requestParams = {
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
         client_secret: credentials.clientSecret,
-        resource: resource.substr(0, resource.length -1)
+        resource: resource
     };
 
     var options = {
@@ -183,40 +210,170 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
         form: requestParams
     };
 
-    return performRequest<AccessToken>(options, function (body, deferred)
+    console.log('Authenticating with server...');
+    return performRequest<any>(options).then<AccessToken>(body =>
     {
-        var content = JSON.parse(body);
         var tok: AccessToken = {
             resource: resource,
             credentials: credentials,
-            expiration: content.expires_on,
-            token: content.access_token
+            expiration: body.expires_on,
+            token: body.access_token
         };
 
-        deferred.resolve(tok);
+        return tok;
     });
 }
 
 /**
  * Transforms a promise so that it is tried again a specific number of times if it fails.
+ *
+ * A 'generator' of promises must be supplied. The reason is that if a promise fails,
+ * then it will stay in a failed state and it won't be possible to await on it anymore.
+ * Therefore a new promise must be returned every time.
+ *
  * @param numRetries How many times should the promise be tried to be fulfilled.
- * @param promise The promise to fulfill
- * @param callback In case of rejection, receives the reason. Should return false to abort retrying.
+ * @param promiseGenerator A function that will generate the promise to try to fulfill.
+ * @param errPredicate In case an error occurs, receives the reason and returns whether to continue retrying
  */
 export function withRetry<T>(
     numRetries: number,
-    promise: Q.Promise<T>,
-    callback?: ((err: any) => boolean)): Q.Promise<T>
+    promiseGenerator: () => Q.Promise<T>,
+    errPredicate?: ((err: any) => boolean)): Q.Promise<T>
 {
-    return promise.fail<T>(function (err)
+    return promiseGenerator().fail(err =>
     {
-        if (numRetries > 0 && (!callback || callback(err)))
+        if (numRetries > 0 && (!errPredicate || errPredicate(err)))
         {
-            return Q.delay(withRetry(numRetries - 1, promise, callback), RETRY_DELAY);
+            console.log(`Operation failed with ${err}`);
+            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
+            return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
         }
         else
         {
+            /* Don't wrap err in an error because it's already an error
+            (.fail() is the equivalent of "catch" for promises) */
             throw err;
         }
     });
 }
+
+export function uploadAzureFile(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
+{
+    return uploadAzureFileBlocks(fileContents, blobUrl).then(blockList =>
+    {
+        console.log(blockList);
+
+        var options = {
+            url: blobUrl + '&comp=blocklist',
+            body: blockList,
+            method: 'PUT'
+        }
+
+        return performRequest<void>(options);
+    });
+}
+
+/**
+ * Uploads a file chunk by chunk to the given Azure blob.
+ * @return A promise for the list of chunks uploaded, in a format understood by the Azure API
+ */
+function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<string>
+{
+    var requestParams = {
+        headers: {
+            'x-ms-blob-type': 'BlockBlob'
+        }
+    }
+    var deferred = Q.defer<string>();
+
+    var numBlocks: number;
+    const fileGuid = uuid.v4().replace(/\-/g, '');
+    var currentBlockId = 0;
+    var numBlocksFinished = 0;
+
+    // This XML is a flat structure so we can get away with just dealing with strings
+    var blockListXml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
+
+    fileContents.on('readable', () =>
+    {
+        var block: string | Buffer;
+
+        while ((block = fileContents.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
+        {
+            var thisBlockId = currentBlockId++;
+
+            requestParams.headers['content-length'] = block.length;
+
+            // Sequence number with leading zeros.
+            // Note: will not work if we need more than a million blocks
+            // Note 2: with current block size, a million blocks is one terabyte.
+            var sequence = ('000000' + thisBlockId).substr(-6);
+            var base64Id = new Buffer(fileGuid + '-' + sequence).toString('base64');
+            var thisBlockUrl = blobUrl + '&comp=block&blockid=' + base64Id;
+
+            blockListXml += '<Latest>' + base64Id + '</Latest>';
+
+            console.log(`\tUploading block ${thisBlockId} (ID ${base64Id})`);
+
+            /* When doing a multipart form request, the request module erroneously (?) adds some headers like
+             * content-disposition to the __contents__ of the data, which corrupts the file. Therefore we have
+             * to use this instead, where the block is piped from a stream to the put request. */
+            streamifier.createReadStream(block)
+                .pipe(request.put(thisBlockUrl, requestParams, function (err, resp, body)
+                {
+                    if (err)
+                    {
+                        deferred.reject(err);
+                    }
+                    else if (resp.statusCode >= 400)
+                    {
+                        deferred.reject(new Error(`Status: ${resp.statusCode}. Body: ${JSON.stringify(body)}`));
+                    }
+                    else
+                    {
+                        console.log(`\tUploaded block ${thisBlockId} (ID ${base64Id})`);
+                        numBlocksFinished++;
+                        if (numBlocksFinished == numBlocks)
+                        {
+                            deferred.resolve(blockListXml += '</BlockList>');
+                        }
+                    }
+                }));
+        }
+    }).on('end', () =>
+    {
+        // Once all blocks have been read from the stream, we know how many there were, so update it here.
+        numBlocks = currentBlockId;
+
+        // It could be the case that the end event is emitted only after all web requests are done.
+        if (numBlocksFinished == numBlocks)
+        {
+            deferred.resolve(blockListXml += '</BlockList>');
+        }
+    });
+
+    return deferred.promise;
+}
+
+
+/** 
+ * Examines a response body and logs errors and warnings.
+ * @param body A body in the format given by the Store API
+ * (Where body.errors and body.warnings are arrays of objects
+ * containing a 'code' and 'details' attribute).
+ */
+function logErrorsAndWarnings(body: any)
+{
+    if (body.errors != undefined && body.errors.length > 0)
+    {
+        console.error('Errors occurred in request');
+        (<any[]>body.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
+    }
+
+    if (body.warnings != undefined && body.warnings.length > 0)
+    {
+        console.warn('Warnings occurred in request');
+        (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+    }
+}
+

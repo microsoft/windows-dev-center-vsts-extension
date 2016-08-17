@@ -4,9 +4,8 @@
  */
 
 /// <reference path="../../typings/globals/node/index.d.ts" />
-/// <reference path="../../typings/globals/jszip/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
-/// <reference path="./node_modules/vsts-task-lib/task.d.ts" />
+/// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
 import api = require('./apiWrapper');
 
@@ -14,9 +13,10 @@ import fs = require('fs');
 import path = require('path');
 import os = require('os');
 
-import JSZip = require('jszip');
+var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
 import request = require('request');
+import stream = require('stream');
 import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
@@ -61,6 +61,11 @@ export interface CorePublishParams
      */
     metadataRoot?: string;
 
+    /**
+     * Whether images should also be updated when a submission updates metadata.
+     */
+    updateImages: boolean;
+
     /** A list of paths to the packages to be uploaded. */
     packages: string[];
 
@@ -82,18 +87,12 @@ export type ParamsWithAppId = AppIdParam & CorePublishParams;
 export type ParamsWithAppName = AppNameParam & CorePublishParams;
 export type PublishParams = ParamsWithAppId | ParamsWithAppName;
 
-interface FileEntryDict
-{
-    // Dictionary of strings to pairs of object arrays and numbers
-    [filePath: string]: { arr: any[], i: number }
-}
-
 /**
  * Type guard: indicates whether these parameters contain an App Id or not.
  */
-function hasAppId(p: PublishParams): p is ParamsWithAppId
+export function hasAppId(p: PublishParams): p is ParamsWithAppId
 {
-    return (<ParamsWithAppId>p).appId !== undefined;
+    return (<ParamsWithAppId>p).appId != undefined;
 }
 
 /** The root of all API requests */
@@ -102,6 +101,9 @@ var ROOT: string;
 /** The delay between requests when polling for the submission status, in miliseconds. */
 const POLL_DELAY = 10000;
 
+/** How many times should we retry. */
+const NUM_RETRIES = 5;
+
 /** The following attributes are considered as lists of strings and not just strings. */
 const STRING_ARRAY_ATTRIBUTES =
     {
@@ -109,6 +111,18 @@ const STRING_ARRAY_ATTRIBUTES =
         features: true,
         recommendedhardware: true
     };
+
+/**
+ * The message used when a commit fails. Note that this does not need to be very
+ * informative since the user will see more details in additional messages.
+ */
+const COMMIT_FAILED_MSG = 'Commit failed';
+
+/**
+ * A little part of the URL to the API that contains a version number.
+ * This may need to be updated in the future to comply with the API.
+ */
+const API_URL_VERSION_PART = '/v1.0/my/';
 
 /**
  * The parameters given to the task. They're declared here to be
@@ -125,28 +139,62 @@ var appId: string;
 /**
  * The main task function.
  */
-export function publishTask(params: PublishParams): void
+export async function publishTask(params: PublishParams)
 {
     taskParams = params;
-    ROOT = taskParams.endpoint + 'v1.0/my/';
 
-    api.authenticate(taskParams.endpoint, taskParams.authentication)
-        .then(tok => currentToken = tok) // Globally set token for future steps.
-        .then(getAppResource)
-        .then(deleteIfForce)
-        .then(appRes => appId = appRes.id) // Globally set app ID for future steps.
-        .then(createSubmission)
-        .then(putMetadata)
-        .then((submissionResource) => uploadZip(submissionResource, taskParams.zipFilePath))
-        .then(commit)
-        .then(pollStatus)
-        .done(
-            () => tl.setResult(tl.TaskResult.Succeeded, 'Submission completed'),
-            (err) => {
-                tl.error(err);
-                tl.setResult(tl.TaskResult.Failed, JSON.stringify(err))
-            }
-    );
+    /* We expect the endpoint part of this to not have a slash at the end.
+     * This is because authenticating to 'endpoint/' will give us an
+     * invalid token, while authenticating to 'endpoint' will work */
+    ROOT = taskParams.endpoint + API_URL_VERSION_PART;
+
+    console.log('Authenticating...');
+    currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
+
+    console.log('Obtaining app information...');
+    var appResource = await getAppResource();
+
+    appId = appResource.id; // Globally set app ID for future steps.
+
+    // Delete pending submission if force is turned on (only one pending submission can exist)
+    if (taskParams.force && appResource.pendingApplicationSubmission != undefined)
+    {
+        console.log('Deleting existing submission...');
+        await deleteSubmission(appResource.pendingApplicationSubmission.resourceLocation);
+    }
+
+    console.log('Creating submission...');
+    var submissionResource = await createSubmission();
+
+    console.log('Updating submission...');
+    await putMetadata(submissionResource);
+
+    console.log('Creating zip file...');
+    var zip = createZip(taskParams.packages, submissionResource);
+    // There might be no files in the zip if the user didn't supply any packages or images.
+    // If there are files, write the file locally and also upload it.
+    if (Object.keys(zip.files).length > 0)
+    {
+        var buf: NodeJS.ReadableStream = createZipStream(zip);
+
+        /* We want to pipe the zip stream to two different streams, since uploading the zip
+           attaches events to the stream itself. */
+        var netPassthrough = new stream.PassThrough();
+
+        buf.pipe(fs.createWriteStream(taskParams.zipFilePath));
+
+        console.log('Uploading zip file...');
+        buf.pipe(netPassthrough)
+        await uploadZip(netPassthrough, submissionResource.fileUploadUrl);
+    }
+
+    console.log('Committing submission...');
+    await commit(submissionResource.id);
+
+    console.log('Polling submission...');
+    await pollSubmissionStatus(submissionResource.id);
+
+    tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
 
 /**
@@ -155,25 +203,28 @@ export function publishTask(params: PublishParams): void
  */
 function getAppResource(): Q.Promise<any>
 {
-    console.log('Getting app information...');
     if (hasAppId(taskParams))
     {
+        // If we have an app ID then we can directly obtain its information
+        tl.debug(`Getting app information (by app ID) for ${taskParams.appId}`);
         var requestParams = {
             url: ROOT + 'applications/' + taskParams.appId,
             method: 'GET'
         };
 
-        return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(JSON.parse);
+        return api.performAuthenticatedRequest<any>(currentToken, requestParams);
     }
     else 
     {
         // Otherwise go look for it through the pages of apps, using the primary name we got.
+        tl.debug(`Getting app information (by app name) for ${taskParams.appName}`);
         return getAppResourceFromName(taskParams.appName);
     }
 }
 
 /**
- * Tries to obtain an app resource from an app name.
+ * Tries to obtain an app resource from the primary name of an app.
+ * This will only work with the primary name.
  * @param givenAppName The app name for which we want to find the resource.
  * @param currentPage Bookkeeping parameter to indicate at which point of the search we are.
  *   This should not be given by the caller.
@@ -185,46 +236,28 @@ function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.P
         currentPage = 'applications';
     }
 
-    console.log('\tSearching for app on ' + currentPage);
+    tl.debug(`\tSearching for app ${givenAppName} on ${currentPage}`);
 
     var requestParams = {
         url: ROOT + currentPage,
         method: 'GET'
     };
 
-    return api.performAuthenticatedRequest<string>(currentToken, requestParams, function (body, deferred)
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(body =>
     {
-        var jbody = JSON.parse(body);
-        var foundAppResource = undefined;
-
-        // Check through the apps returned in this page.
-        for (var i = 0 ; i < jbody.value.length ; i++)
-        {
-            if (jbody.value[i].primaryName == givenAppName)
-            {
-                foundAppResource = jbody.value[i];
-                break;
-            }
-        }
-
+        var foundAppResource = (<any[]>body.value).find(x => x.primaryName == givenAppName);
         if (foundAppResource)
         {
-            deferred.resolve(foundAppResource);
+            tl.debug(`App found with ${foundAppResource.id}`);
+            return foundAppResource;
         }
-        else
+
+        if (body['@nextLink'] === undefined)
         {
-            /* If we didn't find the object, try with the next page and hope we can
-               fulfill the current promise that way. If there is no next page, reject
-               the promise. */
-            if (jbody['@nextLink'] === undefined)
-            {
-                deferred.reject(new Error('No application with name "' + givenAppName + '" was found'));
-            }
-            else
-            {
-                getAppResourceFromName(givenAppName, jbody['@nextLink']).then(res => deferred.resolve(res)).done();
-            }
+            throw new Error(`No application with name "${givenAppName}" was found`);
         }
+
+        return getAppResourceFromName(givenAppName, body['@nextLink']);
     });
 }
 
@@ -232,36 +265,29 @@ function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.P
  * If the 'force' parameter is turned on, checks whether a submission is already existing and
  * deletes it if it's the case.
  * @param appResource
- * @returns Promises back the app resource (in other words, the app resource is chained to the next caller)
+ * @return A promise for the deletion of the submission
  */
-function deleteIfForce(appResource: any): Q.Promise<any>
+function deleteSubmission(submissionLocation: string): Q.Promise<void>
 {
-    if (taskParams.force && appResource.pendingApplicationSubmission !== undefined)
-    {
-        console.log('Force-deleting existing submission...');
-        var requestParams = {
-            url: ROOT + appResource.pendingApplicationSubmission.resourceLocation,
-            method: 'DELETE'
-        };
+    tl.debug(`Deleting submission ${submissionLocation}`);
+    var requestParams = {
+        url: ROOT + submissionLocation,
+        method: 'DELETE'
+    };
 
-        return api.performAuthenticatedRequest(currentToken, requestParams).thenResolve(appResource);
-    }
-    else
-    {
-        return Q.fcall(() => appResource);
-    }
+    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
-/** Creates a submission for a given app. Promises the information about the submission. */
+/** Creates a submission for a given app. Promises the submission resource. */
 function createSubmission(): Q.Promise<any>
 {
-    console.log('Creating new submission...');
+    tl.debug('Creating new submission');
     var requestParams = {
         url: ROOT + 'applications/' + appId + '/submissions',
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(JSON.parse);
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams);
 }
 
 /**
@@ -269,11 +295,11 @@ function createSubmission(): Q.Promise<any>
  * If no metadata update is to be perfomed, no changes are made. Otherwise, we look for the metadata
  * depending on the type of update (text or json).
  * @param submissionResource The current submission request
- * @returns Promises the submission resource that was sent to the API.
+ * @returns A promise for the update of the submission on the server.
  */
-function putMetadata(submissionResource: any): Q.Promise<any>
+function putMetadata(submissionResource: any): Q.Promise<void>
 {
-    console.log('Adding submission metadata...');
+    tl.debug(`Adding metadata for new submission ${submissionResource.id}`);
 
     if (taskParams.metadataUpdateType != MetadataUpdateType.NoUpdate &&
         taskParams.metadataRoot)
@@ -282,7 +308,7 @@ function putMetadata(submissionResource: any): Q.Promise<any>
     }
 
     // Also at this point add the given packages to the list of packages to upload.
-    console.log(`Adding ${taskParams.packages.length} package(s)`);
+    tl.debug(`Adding ${taskParams.packages.length} package(s)`);
     taskParams.packages.map(makePackageEntry).forEach(packEntry =>
     {
         var entry = {
@@ -300,106 +326,160 @@ function putMetadata(submissionResource: any): Q.Promise<any>
         body: submissionResource
     };
 
-    console.log('Updating submission in the server');
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).thenResolve(submissionResource);
+    tl.debug(`Performing metadata update`);
+
+    var putGenerator = () => api.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return api.withRetry(NUM_RETRIES, putGenerator, err => !is400Error(err));
 }
 
 /**
- * Updates the metadata information given in the metadata root
- * @param submissionResource
+ * Updates the metadata information given in the metadata root.
+ * The expected format is as follows:
+ *
+ *  <metadata root>
+ *  |
+ *  +-- <locale> (e.g. en-us)
+ *      |
+ *      +-- [baseListing]
+ *      |    +-- metadata.json (or <attribute>.txt)
+ *      |    +-- images
+ *      |        |
+ *      |        +-- <image type> (e.g. MobileScreenshot)
+ *      |            +-- <image>.png
+ *      |            +-- <image>.json (or <attribute>.<image>.txt)
+ *      |
+ *      +-- [platformOverrides]
+ *           |
+ *           +-- <platform> (e.g. Windows80)
+ *               |
+ *               +-- <same structure as 'baseListing'>
+ *
+ * If the task parameter for metadata update is "Text metadata", one
+ * text file is expected for each attribute to be added. If it is
+ * JSON metadata, one JSON file per listing and per image is expected.
+ *
+ * Both the baseListing and platformOverrides directory are optional.
+ *
+ * @param submissionResource A submission resource that will be modified in-place.
  */
-
 function updateMetadata(submissionResource: any): void
 {
-    console.log(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
-    // Update metadata for listings
-    var listingPaths = fs.readdirSync(taskParams.metadataRoot);
-    for (var i = 0; i < listingPaths.length; i++)
+    tl.debug(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
+    var listings = fs.readdirSync(taskParams.metadataRoot);
+    listings.forEach(listing =>
     {
-        // Update metadata for this listing.
-        console.log(`Obtaining metadata for language ${listingPaths[i]}`);
-        let listingAbsPath = path.join(taskParams.metadataRoot, listingPaths[i]);
-        if (existsAndIsDir(path.join(listingAbsPath, 'baseListing')))
+        updateListingAttributes(submissionResource, listing);
+
+        if (taskParams.updateImages)
         {
-            if (submissionResource.listings[listingPaths[i]] === undefined)
-            {
-                submissionResource.listings[listingPaths[i]] = {};
-            }
-            mergeObjects(submissionResource.listings[listingPaths[i]], makeListing(listingAbsPath, submissionResource.listings[listingPaths[i]]));
+            updateListingImages(submissionResource, listing);
         }
-        else
-        {
-            tl.warning('Listing ' + listingPaths[i] + ' has no baseListing subdirectory. Skipping...');
-        }
-        console.log(`Finished parsing metadata for language ${listingPaths[i]}`)
+    });
+}
+
+/**
+ * Update the attributes of a listing in a submission (e.g. description, features, etc.)
+ * @param submissionResource
+ * @param listingPath
+ */
+function updateListingAttributes(submissionResource: any, listing: string)
+{
+    tl.debug(`Obtaining metadata for language ${listing}`);
+
+    // Create the listing object if it is not present
+    if (submissionResource.listings[listing] === undefined)
+    {
+        submissionResource.listings[listing] = {};
     }
 
-    // Update images from listings
-    for (var listing in submissionResource.listings)
+    // Merge the existing listing object with the new listing made from the given path
+    // Overrides are also checked in the makeListing call.
+    var listingPath = path.join(taskParams.metadataRoot, listing);
+    mergeObjects(submissionResource.listings[listing], makeListing(listingPath), true);
+}
+
+/**
+ * Update the images (and their metadata) of a listing in a submission.
+ * @param submissionResource
+ * @param listingPath
+ */
+function updateListingImages(submissionResource: any, listing: string)
+{
+    tl.debug(`Obtaining images for language ${listing}`);
+
+    var listingPath = path.join(taskParams.metadataRoot, listing);
+
+    var base = submissionResource.listings[listing].baseListing;
+    if (base != undefined)
     {
-        // Update image metadata for the base listing.
-        let listingAbsPath = path.join(taskParams.metadataRoot, listing);
-        var base = submissionResource.listings[listing].baseListing;
-        if (base.images === undefined)
+        if (base.images == undefined)
         {
             base.images = [];
         }
-        console.log(`Updating images from ${listingAbsPath}`);
-        updateImageMetadata(base.images, path.join(listingAbsPath, 'baseListing', 'images'));
-
-        // Do the same for all the platform overrides
-        for (var platOverride in submissionResource.listings[listing].platformOverrides)
-        {
-            var platPath = path.join(listingAbsPath, 'platformOverrides', platOverride, 'images');
-            var platOverrideRef = submissionResource.listings[listing].platformOverrides[platOverride];
-            if (platOverrideRef.images === undefined)
-            {
-                platOverrideRef.images = [];
-            }
-            console.log(`Updating platform override images from ${platPath}`);
-            updateImageMetadata(platOverrideRef.images, platPath);
-        }
+        tl.debug(`Updating images from ${listingPath}`);
+        updateImageMetadata(base.images, path.join(listingPath, 'baseListing', 'images'));
     }
 
-    console.log('Finished updating metadata');
+    // Do the same for all the platform overrides
+    for (var platOverride in submissionResource.listings[listing].platformOverrides)
+    {
+        var platPath = path.join(listingPath, 'platformOverrides', platOverride, 'images');
+        var platOverrideRef = submissionResource.listings[listing].platformOverrides[platOverride];
+        if (platOverrideRef.images == undefined)
+        {
+            platOverrideRef.images = [];
+        }
+        tl.debug(`Updating platform override images from ${platPath}`);
+        updateImageMetadata(platOverrideRef.images, platPath);
+    }
 }
+
 
 /**
  * Construct a listing whose root is in the given path. This listing includes a base listing and
  * potentially some platform overrides.
  * @param listingPath
  */
-function makeListing(listingAbsPath: string, languageJsonObj: any): any
+function makeListing(listingAbsPath: string): any
 {
-    // Obtain base listing
-    console.log('Obtaining base listings metadata...');
-    var baseListing = getListingAttributes(path.join(listingAbsPath, 'baseListing'), languageJsonObj.baseListing);
-    console.log('Done!');
+    var baseListing = undefined;
+    var platformOverrides = undefined;
 
-    // Check if we have platform overrides
-    console.log('Verifying platform overrides directory...');
-    var platformOverrides = {};
+    // Check for a base listing.
+    var basePath = path.join(listingAbsPath, 'baseListing');
+    if (existsAndIsDir(basePath))
+    {
+        tl.debug('Obtaining base listing');
+        baseListing = getListingAttributes(basePath);
+    }
+    
+
+    // Check for platform overrides.
     var overridesPath = path.join(listingAbsPath, 'platformOverrides');
-    console.log(`Looking for directory ${overridesPath}`)
     if (existsAndIsDir(overridesPath))
     {
-        console.log('Found platform overrides directory. Analyzing...');
+        platformOverrides = {};
         // If we do, consider each directory in the platformOverrides directory as a platform.
         var allOverrideDirs = fs.readdirSync(overridesPath).filter((x) =>
-            { try {fs.statSync(path.join(overridesPath, x)).isDirectory()} catch (e) { return false;} });
-        for (var i = 0; i < allOverrideDirs.length; i++)
+            fs.statSync(path.join(overridesPath, x)).isDirectory());
+
+        allOverrideDirs.forEach(overrideDir =>
         {
-            var overridePath = path.join(overridesPath, allOverrideDirs[i]);
-            console.log(`Obtaining listing metadata from folder ${overridePath}`);
-            platformOverrides[allOverrideDirs[i]] = getListingAttributes(overridePath, languageJsonObj.platformOverrides);
-        }
-        console.log('Done!');
+            var overridePath = path.join(overridesPath, overrideDir);
+            tl.debug(`Obtaining platform override ${overridePath}`);
+            platformOverrides[overrideDir] = getListingAttributes(overridePath);
+        });
     }
-    else
+
+    // Avoid creating spurious properties on the return if they are undefined.
+    var ret: any = {};
+    if (baseListing != undefined)
     {
-        // Avoid creating an attribute for platform overrides if they're not there
-        console.log('No platform overrides folder found.');
-        platformOverrides = undefined;
+        ret.baseListing = baseListing;
+    }
+    if (platformOverrides != undefined)
+    {
+        ret.platformOverrides = platformOverrides;
     }
 
     return {
@@ -416,7 +496,7 @@ function makeListing(listingAbsPath: string, languageJsonObj: any): any
  * of the file will be the attribute and the contents will be the value.
  * @param listingPath
  */
-function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
+function getListingAttributes(listingWithPlatAbsPath: string): any
 {
     var listing = {};
 
@@ -425,38 +505,28 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
         var jsonPath = path.join(listingWithPlatAbsPath, 'metadata.json');
         if (existsAndIsFile(jsonPath))
         {
+            tl.debug(`Loading listing attributes from ${jsonPath}`);
             listing = requireAbsoluteOrRelative(jsonPath);
-        }
-        else
-        {
-            tl.warning('No metadata.json found for ' + listingWithPlatAbsPath +
-                '. Attributes from the last submission will be used.');
         }
     }
     else
     {
-        for(var prop in jsonObj)
+        var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
+            fs.statSync(path.join(listingWithPlatAbsPath, p)).isFile() &&
+            path.extname(p) == '.txt');
+
+        propFiles.forEach(propPath =>
         {
-            console.log(`Looking for corresponding file for property ${prop}`);
-            var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
-            !fs.statSync(path.join(listingWithPlatAbsPath, p)).isDirectory() &&
-            p.substring(p.length - 4) == '.txt' &&
-            path.parse(p).name.toUpperCase() === prop.toUpperCase());
-
-            if (propFiles === undefined || propFiles.length == 0)
-            {
-                console.warn(`No file found for property ${prop}`);
-                continue;
-            }
-
-            // Default to grab the first file that matches the property name.
-            var txtPath = path.join(listingWithPlatAbsPath, propFiles[0]);
-            console.log(`Working with file ${txtPath}`);
+            // Obtain the contents of the file as the value of the property
+            var txtPath = path.join(listingWithPlatAbsPath, propPath);
+            tl.debug(`Loading individual listing attribute from ${txtPath}`);
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
-            console.log(`Assigning contents to property`);
-            listing[prop] = STRING_ARRAY_ATTRIBUTES[prop.toLowerCase()] ? splitAnyNewline(contents) : contents;
-        }
+            // Based on whether this is an array or string attribute, split or not.
+            var propName = path.basename(propPath, '.txt'); 
+            listing[propName] = STRING_ARRAY_ATTRIBUTES[propName.toLowerCase()] ? splitAnyNewline(contents) : contents;
+        });
+
     }
 
     return listing;
@@ -471,28 +541,23 @@ function getListingAttributes(listingWithPlatAbsPath: string, jsonObj: any): any
  */
 function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
 {
-    for (var i = 0; i < imageArray.length; i++)
-    {
-        imageArray[i].fileStatus = 'PendingDelete';
-    }
+    imageArray.forEach(img => img.fileStatus = 'PendingDelete');
 
     if (existsAndIsDir(imagesAbsPath))
     {
         var imageTypeDirs = fs.readdirSync(imagesAbsPath).filter(x =>
             fs.statSync(path.join(imagesAbsPath, x)).isDirectory());
 
-
         // Check all subdirectories for image types.
-        for (var i = 0; i < imageTypeDirs.length; i++)
+        imageTypeDirs.forEach(imageTypeDir =>
         {
-            var imageTypeAbs = path.join(imagesAbsPath, imageTypeDirs[i]);
-            console.log(`Reading images from ${imageTypeAbs}`);
+            var imageTypeAbs = path.join(imagesAbsPath, imageTypeDir);
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
-                p.substring(p.length - 4) == '.png') // Store only supports png
+                path.extname(p) == '.png') // Store only supports png
 
-            imageFiles.forEach((img) =>
+            imageFiles.forEach(img =>
             {
                 var imageName = path.parse(img).name;
                 var imageData = getImageAttributes(imageTypeAbs, imageName, currentFiles);
@@ -501,89 +566,146 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
                     imageArray.push(imageData);
                 }
             });
-        }
+        });
     }
 }
 
 /**
- * Obtain listing attributes from the given directory. If the metadata update type given in the task
+ * Obtain image attributes from the given directory. If the metadata update type given in the task
  * params is "Json update", it is expected that a file named "<image>.json" will be present at the
  * given path, and will contain the attributes to update. If the metadata update type is "Text update",
  * the listing path will be scanned for *.<image>.txt files. Any .txt file will be added to the attributes.
  * The name of the file will indicate the name of the attribute.
+ *
+ * In addition, the image will be marked as pending upload, and its image type will be given by the name
+ * of the directory it's in.
+ *
  * @param imagesAbsPath The absolute path to the current image directory.
  * @param imageName The filename of the image, without its extension.
  * @param currentFiles A list of files in the directory.
  */
 function getImageAttributes(imagesAbsPath: string, imageName: string, currentFiles: string[]): any
 {
+    var image: any = {};
+    var imageAbsName = path.join(imagesAbsPath, imageName);
+
     if (taskParams.metadataUpdateType == MetadataUpdateType.JsonMetadata)
     {
+        
         var jsonPath = path.join(imagesAbsPath, imageName + '.metadata.json');
-        if (existsAndIsFile(jsonPath))
-        {
-            return requireAbsoluteOrRelative(jsonPath);
-        }
-        else
-        {
-            tl.warning('No metadata.json found for image ' + path.join(imagesAbsPath, imageName) +
-                '. Image will be ignored');
-            return undefined;
-        }
+        tl.debug(`Loading attributes for ${imageAbsName} from ${jsonPath}`);
+        image = requireAbsoluteOrRelative(jsonPath);
     }
     else
     {
-        var image: any = {};
         // Obtain *.<imageName>.txt files and add them as attributes
         var txtFiles = currentFiles.filter(p =>
             !fs.statSync(path.join(imagesAbsPath, p)).isDirectory() &&
             p.substring(p.length - 4 - imageName.length) == imageName + '.txt');
 
-        for (var i = 0; i < txtFiles.length; i++)
+        txtFiles.forEach(txtFile =>
         {
-            var txtPath = path.join(imagesAbsPath, txtFiles[i]);
-            var attrib = txtFiles[i].substring(0, txtFiles[i].length - 4);
+            var txtPath = path.join(imagesAbsPath, txtFile);
+            tl.debug(`Loading individual attribute for ${imageAbsName} from ${txtPath}`);
+            var attrib = txtFile.substring(0, txtFile.indexOf('.'));
             image[attrib] = fs.readFileSync(txtPath, 'utf-8');
-        }
-
-        // The type of image is the name of the directory in which we find the image.
-        image.imageType = path.basename(imagesAbsPath);
-        image.fileStatus = 'PendingUpload';
-
-        // The filename we use is relative from the metadata root.
-        var filenameForMetadata = path.join(imagesAbsPath.replace(taskParams.metadataRoot, ''), imageName + '.png');
-        if (filenameForMetadata.charAt(0) == path.sep)
-        {
-            filenameForMetadata = filenameForMetadata.substring(1);
-        }
-
-        image.fileName = filenameForMetadata;
-        return image;
+        });
     }
+
+    // The type of image is the name of the directory in which we find the image.
+    image.imageType = path.basename(imagesAbsPath);
+    image.fileStatus = 'PendingUpload';
+
+    // The filename we use is relative from the metadata root.
+    // Surprisingly, there is no proper way to do this, so we use a dumb replace.
+    var filenameForMetadata = path.join(imagesAbsPath.replace(taskParams.metadataRoot, ''), imageName + '.png');
+    if (filenameForMetadata.charAt(0) == path.sep)
+    {
+        filenameForMetadata = filenameForMetadata.substring(1);
+    }
+
+    image.fileName = filenameForMetadata;
+    return image;
 
 }
 
 /**
- * Creates and uploads a zip file to the blob in the submissionResource.
+ * Create a zip file containing the information 
  * @param submissionResource
- * @return Promises back the submission resource.
  */
-function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
+function createZip(packages: string[], submissionResource: any)
 {
-    console.log(`Creating zip file into ${zipFilePath}`);
-
+    tl.debug(`Creating zip file`);
     var zip = new JSZip();
-    var hasFiles = false;
-    console.log('Adding packages to zip');
-    hasFiles = addPackagesToZip(zip);
-    console.log('Adding images to zip');
-    hasFiles = addImagesToZip(submissionResource, zip) || hasFiles;
+    addPackagesToZip(packages, zip);
+    addImagesToZip(submissionResource, zip);
+    return zip;
+}
 
-    if (!hasFiles)
+/**
+ * Add the given packages to the given zip file.
+ * Each package is placed under its own directory that is named by the index of the
+ * package in this list. This is to prevent name collisions.
+ * @see makePackageEntry
+ */
+function addPackagesToZip(packages: string[], zip): void
+{
+    var currentFiles = {};
+
+    packages.forEach((aPath, i) =>
     {
-        return Q.fcall(() => submissionResource);
-    }
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var entry = makePackageEntry(aPath, i).replace(/\\/g, '/');
+        tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
+        zip.file(entry, fs.createReadStream(aPath), { compression: 'DEFLATE' });
+    });
+}
 
+/**
+ * Add any PendingUpload images in the given submission resource to the given zip file.
+ */
+function addImagesToZip(submissionResource: any, zip)
+{
+    for (var listingKey in submissionResource.listings)
+    {
+        tl.debug(`Checking for new images in listing ${listingKey}...`);
+        var listing = submissionResource.listings[listingKey];
+
+        if (listing.baseListing.images)
+        {
+            addImagesToZipFromListing(listing.baseListing.images, zip);
+        }
+
+        for (var platOverrideKey in listing.platformOverrides)
+        {
+            tl.debug(`Checking for new images in platform override ${listingKey}/${platOverrideKey}...`);
+            var platOverride = listing.platformOverrides[platOverrideKey];
+
+            if (platOverride.images)
+            {
+                addImagesToZipFromListing(platOverride.images, zip);
+            }
+        }
+    }
+}
+
+function addImagesToZipFromListing(images: any[], zip)
+{
+    images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
+    {
+        var imgPath = path.join(taskParams.metadataRoot, image.fileName);
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var filenameInZip = image.fileName.replace(/\\/g, '/');
+        tl.debug(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
+        zip.file(filenameInZip, fs.createReadStream(imgPath), { compression: 'DEFLATE' });
+    });
+}
+
+/**
+ * Creates a buffer to the given zip file.
+ */
+function createZipStream(zip): NodeJS.ReadableStream
+{
     var zipGenerationOptions = {
         base64: false,
         compression: 'DEFLATE',
@@ -591,157 +713,42 @@ function uploadZip(submissionResource: any, zipFilePath: string): Q.Promise<any>
         streamFiles: true
     };
 
-    console.log('Generating zip file');
-    var buffer = zip.generate(zipGenerationOptions)
-    fs.writeFileSync(zipFilePath, buffer);
+    return zip.generateNodeStream(zipGenerationOptions);
+}
 
-    var requestParams = {
-        headers: {
-            'Content-Length': buffer.length,
-            'x-ms-blob-type': 'BlockBlob'
-        }
-    }
-    var deferred = Q.defer<any>();
+/**
+ * Uploads a zip file to the appropriate blob.
+ * @param zip A buffer containing the zip file
+ * @return A promise for the upload of the zip file.
+ */
+function uploadZip(zip: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
+{
+    tl.debug(`Uploading zip file to ${blobUrl}`);
 
     /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
      * base64 parameter. There is no good way to fix this, because we don't really know how to
      * distinguish between 'correct' uses of those characters, and their spurious instances in
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
-    var dest = submissionResource.fileUploadUrl.replace(/\+/g, '%2B');
-    console.log(`Uploading to ${dest}`);
+    var dest = blobUrl.replace(/\+/g, '%2B');
 
-    /* When doing a multipart form request, the request module erroneously (?) adds some headers like content-disposition
-     * to the __contents__ of the file, which corrupts it. Therefore we have to use this instead, where the file is
-     * piped from a stream to the put request. */
-    fs.createReadStream(zipFilePath).pipe(request.put(dest, requestParams, function (err, resp, body)
-    {
-        if (err)
-        {
-            deferred.reject(err);
-        }
-        else if (resp.statusCode >= 400)
-        {
-            deferred.reject(new Error('Status code: ' + resp.statusCode + '. Body: ' + JSON.stringify(body)));
-        }
-        else
-        {
-            deferred.resolve(submissionResource);
-        }
-    }));
-
-    return deferred.promise;
+    return api.uploadAzureFile(zip, dest);
 }
 
-/**
- * Add the packages given as parameters to the task to the given zip file.
- * @param zip
- * @return Whether some packages were added to the zip file.
- */
-function addPackagesToZip(zip: JSZip): boolean
-{
-    var currentFiles = {};
-
-    taskParams.packages.forEach((aPath, i) =>
-    {
-        if (!existsAndIsFile(aPath))
-        {
-            tl.warning('Supplied package ' + aPath + ' does not exist or is not a file. Skipping...');
-        }
-        else
-        {
-            // According to JSZip documentation, the directory separator used is a forward slash.
-            var entry = makePackageEntry(aPath, i).replace('\\', '/');
-            console.log(`Adding entry ${entry} to zip file from path ${aPath}`);
-            zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
-        }
-    });
-
-    return taskParams.packages.length > 0;
-}
-
-/**
- * Add any PendingUpload images in the given submission resource to the given zip file.
- */
-function addImagesToZip(submissionResource: any, zip: JSZip): boolean
-{
-    var hasAddedImages = false;
-    for (var listingKey in submissionResource.listings)
-    {
-        console.log(`Adding images for listing ${listingKey}`);
-        var listing = submissionResource.listings[listingKey];
-        hasAddedImages = addImagesToZipFromListing(listing.baseListing.images, zip) || hasAddedImages;
-
-        for (var platOverrideKey in listing.platformOverrides)
-        {
-            console.log(`Adding images for platform override ${platOverrideKey}`);
-            var platOverride = listing.platformOverrides[platOverrideKey];
-            hasAddedImages = addImagesToZipFromListing(platOverride.images, zip) || hasAddedImages;
-        }
-    }
-
-    return hasAddedImages;
-}
-
-function addImagesToZipFromListing(images: any[], zip: JSZip): boolean
-{
-    var hasAddedImages = false;
-    images.filter(image => image.fileStatus == 'PendingUpload').forEach(image =>
-    {
-        hasAddedImages = true;
-
-        var imgPath = path.join(taskParams.metadataRoot, image.fileName);
-        // According to JSZip documentation, the directory separator used is a forward slash.
-        var filenameInZip = image.fileName.replace('\\', '/');
-        console.log(`Adding image path ${imgPath} into zip as ${filenameInZip}`);
-        zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
-    });
-
-    return hasAddedImages;
-}
 
 
 /**
  * Commits a submission, checking for any errors.
- * @param submissionResource
+ * @return A promise for the commit of the submission
  */
-function commit(submissionResource: any): any
+function commit(submissionId: string): Q.Promise<void>
 {
-    console.log('Committing submission...');
     var requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id + '/commit',
+        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams, function (body, deferred)
-    {
-        var jbody = JSON.parse(body);
-        if (jbody.errors !== undefined && jbody.errors.length > 0)
-        {
-            var errs = 'Errors occurred when committing:';
-            for (var i = 0; i < jbody.errors.length; i++)
-            {
-                errs += '\n\t[' + jbody.errors[i].code + '] ' + jbody.errors[i].details;
-            }
-
-            deferred.reject(new Error(errs));
-        }
-        else
-        {
-            if (jbody.warnings !== undefined && jbody.warnings.length > 0)
-            {
-                var warns = 'Warnings occurred when committing:';
-                for (var i = 0; i < jbody.warnings.length; i++)
-                {
-                    warns += '\n\t[' + jbody.warnings[i].code + '] ' + jbody.warnings[i].details;
-                }
-
-                tl.warning(warns);
-            }
-
-            deferred.resolve(submissionResource);
-        }
-    });
+    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
 /**
@@ -749,54 +756,79 @@ function commit(submissionResource: any): any
  * @param submissionResource The submission to poll
  * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
  */
-function pollStatus(submissionResource: any): Q.Promise<void>
+function pollSubmissionStatus(submissionId: string): Q.Promise<void>
 {
-    const statusMsg = 'Submission ' + submissionResource.id + ' status for App ' + appId + ': ';
-    const requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,
-        method: 'GET'
-    };
-
-    var requestPromise = api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
+    var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
+    return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
+        // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
+        !(is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
+        then(status =>
     {
-        /* Once the previous request has finished, examine the body to tell if we should start a new one. */
-        var jbody = JSON.parse(body);
-        if (!jbody.status.endsWith('Failed'))
+        if (status)
         {
-            console.log(statusMsg + jbody.status);
-
-            /* In immediate mode, we expect to get all the way to "Published" status.
-             * In other modes, we stop at "Release" status. */
-            if (    jbody.status == 'Published'
-                || (jbody.status == 'Release' && jbody.targetPublishMode != 'Immediate'))
-            {
-                // Note that the fulfillment handler can either return a promise to a value (as below)
-                // or a value itself (as here).
-                return;
-            }
-            else
-            {
-                // Delay for some amount of time then try again.
-                return Q.delay(POLL_DELAY).then<void>(() => pollStatus(submissionResource));
-            }
+            return;
         }
         else
         {
-            tl.error(statusMsg + ' failed with ' + jbody.status);
-            tl.error('Reported errors: ');
-            for (var i = 0; i < jbody.statusDetails.errors.length; i++)
-            {
-                var errDetail = jbody.statusDetails.errors[i];
-                tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
-            }
-            throw new Error('Commit failed');
+            return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(submissionId));
         }
     });
-
-    return api.withRetry(5, requestPromise);
 }
 
+/** Indicates whether the given object is an HTTP response for a 4xx error. */
+function is400Error(err): boolean
+{
+    // Does this look like a ResponseInformation?
+    if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
+    {
+        return err.response.statusCode >= 400
+            && err.response.statusCode < 500
+    }
 
+    return false;
+}
+
+/**
+ * Checks the status of a submission.
+ * @param submissionId
+ * @return A promise for the status of the submission: true for completed, false for not completed yet.
+ * The promise will be rejected if an error occurs in the submission.
+ */
+function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
+{
+    const statusMsg = 'Submission ' + submissionId + ' status for App ' + appId + ': ';
+    const requestParams = {
+        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId,
+        method: 'GET'
+    };
+
+    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
+    {
+        /* Once the previous request has finished, examine the body to tell if we should start a new one. */
+        if (!body.status.endsWith('Failed'))
+        {
+            var msg = statusMsg + body.status
+            tl.debug(statusMsg + body.status);
+            console.log(msg);
+
+            /* In immediate mode, we expect to get all the way to "Published" status.
+             * In other modes, we stop at "Release" status. */
+            return body.status == 'Published'
+                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
+        }
+        else
+        {
+            tl.error(statusMsg + ' failed with ' + body.status);
+            tl.error('Reported errors: ');
+            for (var i = 0; i < body.statusDetails.errors.length; i++)
+            {
+                var errDetail = body.statusDetails.errors[i];
+                tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
+            }
+            throw new Error(COMMIT_FAILED_MSG);
+        }
+    });
+}
 
 function existsAndIsDir(aPath: string)
 {
@@ -839,55 +871,64 @@ function requireAbsoluteOrRelative(aPath: string): any
  * mergeObjects(x, x) and mergeObjects(x, undefined) have no effect on x
  * If a === {}, then after mergeObjects(a, x), we have a === x
  *
+ * The effect of ignoreCase is exemplified thus:
+ *   mergeObjects( { ABC: 1 }, { abc: 2 }, true) -> dest is { ABC: 2 }          // case ignored
+ *   mergeObjects( { ABC: 1 }, { abc: 2 }, false) -> dest is { ABC: 1, abc: 2 } // case preserved
+ *
  * @param dest
  * @param source
+ * @param ignoreCase
  */
-function mergeObjects(dest: any, source: any): void
+function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
 {
-    for (var prop in source)
+    ignoreCase = ignoreCase == undefined ? true : ignoreCase;
+    var destPropsCaseMapping = {};
+    if (ignoreCase)
     {
-        console.log(`Merging property ${prop}`);
-        if (!dest[prop])
+        for (var prop in dest)
         {
-            console.log(`Property ${prop} does not exist in destination object, adding it.`);
-            dest[prop] = source[prop];
+            destPropsCaseMapping[prop.toLowerCase()] = prop;
         }
-        else if (typeof source[prop] != 'undefined')
+    }
+
+    for (var sourceProp in source)
+    {
+        var destProp = sourceProp;
+        if (ignoreCase && destPropsCaseMapping[sourceProp.toLowerCase()] != undefined)
         {
-            if (typeof dest[prop] != typeof source[prop])
+            destProp = destPropsCaseMapping[sourceProp.toLowerCase()];
+        }
+
+
+        if (!dest[destProp])
+        {
+            dest[destProp] = source[sourceProp];
+        }
+        else if (typeof source[sourceProp] != 'undefined')
+        {
+            if (typeof dest[destProp] != typeof source[sourceProp])
             {
-                var error = `Could not merge objects: conflicting types for property ${prop}: `
-                    + `source has type ${typeof source[prop]}, but dest has type ${typeof dest[prop]}`;
-                console.log(error);
+                var error = `Could not merge objects: conflicting types for property ${sourceProp}: `
+                    + `source has type ${typeof source[sourceProp]}, but dest has type ${typeof dest[destProp]}`;
                 throw new Error(error);
             }
 
-            if (typeof dest[prop] == 'object' && !Array.isArray(dest[prop]))
+            if (typeof dest[destProp] == 'object' && !Array.isArray(dest[destProp]))
             {
-                console.log(`Property ${prop} is an object, merging internal properties...`);
-                mergeObjects(dest[prop], source[prop]);
+                mergeObjects(dest[destProp], source[sourceProp], ignoreCase);
             }
             else
             {
-                console.log(`Overriding destination value:`)
-                console.log(`<${dest[prop]}>`);
-                console.log(`with source value `);
-                console.log(`<${source[prop]}>`);
-                dest[prop] = source[prop];
+                dest[destProp] = source[sourceProp];
             }
         }
-        else
-        {
-            console.log(`Property ${prop} is undefined in source, skipping.`);
-        }
-        console.log(`Done merging property ${prop}`);
     }
 }
 
-/** Split a string on both '\n' and '\r\n', removing empty entries. */
+/** Split a string on both '\n' and '\r\n', removing empty or whitespace entries. */
 function splitAnyNewline(str: string): string[]
 {
-    return str.replace('\r\n', '\n').split('\n').filter(s => s.length > 0);
+    return str.replace(/\r\n/g, '\n').split('\n').filter(s => s.trim().length > 0);
 }
 
 
