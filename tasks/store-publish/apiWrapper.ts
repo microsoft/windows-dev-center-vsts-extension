@@ -107,8 +107,11 @@ export class ResponseInformation
  * If no error occurs, resolves the returned promise with the body.
  *
  * @param options Options describing the request to execute.
+ * @param stream If specified, pipe this stream into the request.
  */
-export function performRequest<T>(options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
+export function performRequest<T>(
+    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
+    stream?: NodeJS.ReadableStream):
     Q.Promise<T>
 {
     var deferred = Q.defer<T>();
@@ -118,7 +121,7 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
         options.timeout = TIMEOUT;
     }
 
-    request(options, function (error, response, body)
+    var callback = function (error, response, body)
     {
         // For convenience, parse the body if it's JSON.
         if (response != undefined && // response is undefined if a transport-level error occurs
@@ -138,7 +141,16 @@ export function performRequest<T>(options: (request.UriOptions | request.UrlOpti
         {
             deferred.resolve(body);
         }
-    });
+    }
+
+    if (!stream)
+    {
+        request(options, callback);
+    }
+    else
+    {
+        stream.pipe(request(options, callback));
+    }
 
     return deferred.promise;
 }
@@ -257,42 +269,61 @@ export function withRetry<T>(
     });
 }
 
+/**
+ * Uploads a file to the given Azure blob.
+ * @param fileContents
+ * @param blobUrl
+ */
 export function uploadAzureFile(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
 {
-    return uploadAzureFileBlocks(fileContents, blobUrl).then(blockList =>
+    var promisesForBlocks = Q(uploadAzureFileBlocks(fileContents, blobUrl));
+
+    return promisesForBlocks.then(blockList =>
     {
-        console.log(blockList);
+        // Once all blocks have been uploaded, tell Azure the order they should be in.
+        console.log('\t... All blocks uploaded.');
+
+        var body =
+              '<?xml version="1.0" encoding="utf-8"?><BlockList>'
+            + blockList.map(s => `<Latest>${s}</Latest>`).join('')
+            + '</BlockList>';
 
         var options = {
             url: blobUrl + '&comp=blocklist',
-            body: blockList,
+            body: body,
             method: 'PUT'
         }
 
-        return performRequest<void>(options);
+        return withRetry(5, () => performRequest<void>(options));
     });
 }
 
 /**
  * Uploads a file chunk by chunk to the given Azure blob.
- * @return A promise for the list of chunks uploaded, in a format understood by the Azure API
+ * @return A promise for the list of block IDs uploaded
  */
-function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<string>
+async function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: string)
 {
     var requestParams = {
+        url: '',
+        method: 'PUT',
         headers: {
             'x-ms-blob-type': 'BlockBlob'
         }
     }
-    var deferred = Q.defer<string>();
 
-    var numBlocks: number;
+    /* The reason why we have promises for promises here is because we're really doing two levels async operations at once.
+       We're reading the file, and kicking off web requests as we go along.
+       The 'outer' promise is for reading the file. This happens chunk by chunk, and each chunk is immediately sent off into
+       a web request. The 'inner' promises are thus for the upload of each chunk.
+
+       Thankfully this is hidden from users of this function.
+    */
+    var deferred = Q.defer<Q.Promise<string>[]>();
+
     const fileGuid = uuid.v4().replace(/\-/g, '');
+    var blockPromises: Q.Promise<string>[] = [];
     var currentBlockId = 0;
-    var numBlocksFinished = 0;
-
-    // This XML is a flat structure so we can get away with just dealing with strings
-    var blockListXml = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
 
     fileContents.on('readable', () =>
     {
@@ -300,59 +331,35 @@ function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: str
 
         while ((block = fileContents.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
         {
-            var thisBlockId = currentBlockId++;
-
             requestParams.headers['content-length'] = block.length;
 
             // Sequence number with leading zeros.
             // Note: will not work if we need more than a million blocks
             // Note 2: with current block size, a million blocks is one terabyte.
-            var sequence = ('000000' + thisBlockId).substr(-6);
+            var sequence = ('000000' + currentBlockId).substr(-6);
             var base64Id = new Buffer(fileGuid + '-' + sequence).toString('base64');
-            var thisBlockUrl = blobUrl + '&comp=block&blockid=' + base64Id;
+            requestParams.url = blobUrl + '&comp=block&blockid=' + base64Id;
 
-            blockListXml += '<Latest>' + base64Id + '</Latest>';
-
-            console.log(`\tUploading block ${thisBlockId} (ID ${base64Id})`);
+            console.log(`\tUploading block ${currentBlockId} (ID ${base64Id})`);
+            currentBlockId++;
 
             /* When doing a multipart form request, the request module erroneously (?) adds some headers like
              * content-disposition to the __contents__ of the data, which corrupts the file. Therefore we have
              * to use this instead, where the block is piped from a stream to the put request. */
-            streamifier.createReadStream(block)
-                .pipe(request.put(thisBlockUrl, requestParams, function (err, resp, body)
-                {
-                    if (err)
-                    {
-                        deferred.reject(err);
-                    }
-                    else if (resp.statusCode >= 400)
-                    {
-                        deferred.reject(new Error(`Status: ${resp.statusCode}. Body: ${JSON.stringify(body)}`));
-                    }
-                    else
-                    {
-                        console.log(`\tUploaded block ${thisBlockId} (ID ${base64Id})`);
-                        numBlocksFinished++;
-                        if (numBlocksFinished == numBlocks)
-                        {
-                            deferred.resolve(blockListXml += '</BlockList>');
-                        }
-                    }
-                }));
+            var blockPromiseGenerator = () => performRequest(requestParams, streamifier.createReadStream(block)).thenResolve(base64Id);
+
+            /* Also allow retries. We don't expect Azure to be down. If it is, we should normally have failed in a previous step. */
+             *
+            var blockPromise = withRetry(5, blockPromiseGenerator);
+            blockPromises.push(blockPromise);
         }
     }).on('end', () =>
     {
-        // Once all blocks have been read from the stream, we know how many there were, so update it here.
-        numBlocks = currentBlockId;
-
-        // It could be the case that the end event is emitted only after all web requests are done.
-        if (numBlocksFinished == numBlocks)
-        {
-            deferred.resolve(blockListXml += '</BlockList>');
-        }
+        deferred.resolve(blockPromises);
     });
 
-    return deferred.promise;
+    blockPromises = await deferred.promise;
+    return Q.all(blockPromises);
 }
 
 
