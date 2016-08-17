@@ -657,7 +657,7 @@ function addPackagesToZip(packages: string[], zip): void
         // According to JSZip documentation, the directory separator used is a forward slash.
         var entry = makePackageEntry(aPath, i).replace(/\\/g, '/');
         tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
-        zip.file(entry, fs.readFileSync(aPath), { compression: 'DEFLATE' });
+        zip.file(entry, fs.createReadStream(aPath), { compression: 'DEFLATE' });
     });
 }
 
@@ -697,7 +697,7 @@ function addImagesToZipFromListing(images: any[], zip)
         // According to JSZip documentation, the directory separator used is a forward slash.
         var filenameInZip = image.fileName.replace(/\\/g, '/');
         tl.debug(`Adding image path ${imgPath} to zip as ${filenameInZip}`);
-        zip.file(filenameInZip, fs.readFileSync(imgPath), { compression: 'DEFLATE' });
+        zip.file(filenameInZip, fs.createReadStream(imgPath), { compression: 'DEFLATE' });
     });
 }
 
