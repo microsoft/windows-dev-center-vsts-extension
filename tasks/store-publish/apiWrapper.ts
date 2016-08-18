@@ -250,15 +250,42 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
 export function withRetry<T>(
     numRetries: number,
     promiseGenerator: () => Q.Promise<T>,
-    errPredicate?: ((err: any) => boolean)): Q.Promise<T>
+    errPredicate?: ((err: any) => (boolean | Q.Promise<boolean>))): Q.Promise<T>
 {
     return promiseGenerator().fail(err =>
     {
-        if (numRetries > 0 && (!errPredicate || errPredicate(err)))
+        // What to return in case of success.
+        var success = Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
+
+        // A function that either returns the success promise or throws, depending on its input.
+        var verificationFunction = val =>
         {
-            console.log(`Operation failed with ${err}`);
-            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
-            return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
+            if (val)
+            {
+                console.log(`Operation failed with ${err}`);
+                console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
+                return success;
+            }
+            else
+            {
+                throw err;
+            }
+        }
+
+        if (numRetries > 0 && !errPredicate)
+        {
+            var shouldRetry = errPredicate(err);
+
+            // If we have a boolean, we know enough information to return straight away.
+            if (typeof shouldRetry === 'boolean')
+            {
+                return verificationFunction(shouldRetry);
+            }
+            else
+            {
+                // Otherwise, delegate the obtention of the boolean, then decide.
+                return shouldRetry.then(verificationFunction);
+            }
         }
         else
         {

@@ -287,7 +287,33 @@ function createSubmission(): Q.Promise<any>
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams);
+    var generator = () => api.performAuthenticatedRequest<any>(currentToken, requestParams);
+    var retryFunc = async function (err)
+    {
+        if (!is400Error(err))
+        {
+            if (is500Error(err))
+            {
+                // If the submission creation fails, we should check if a submission was,
+                // in fact, created, and delete it if so.
+                tl.debug('Trying to recover from submission creation failure');
+                var appRes = await getAppResource();
+                if (taskParams.force && appRes.pendingApplicationSubmission != undefined)
+                {
+                    await deleteSubmission(appRes.pendingApplicationSubmission.resourceLocation);
+                }
+            }
+
+            /* It was either a 500 which we mitigated above, or it wasn't, in which case it was a
+             * transport-level error, so we can retry in both cases. */
+            return true;
+        }
+
+        // It was a 400 error, so a problem on our side. Don't retry.
+        return false;
+    }
+
+    return api.withRetry(5, generator, err => Q(retryFunc(err)));
 }
 
 /**
@@ -786,6 +812,11 @@ function is400Error(err): boolean
     }
 
     return false;
+}
+
+function is500Error(err): boolean
+{
+    return err instanceof api.ResponseInformation && err.response.statusCode >= 500;
 }
 
 /**
