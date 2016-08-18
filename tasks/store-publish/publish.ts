@@ -805,7 +805,7 @@ function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
     return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
     {
         /* Once the previous request has finished, examine the body to tell if we should start a new one. */
-        if (!body.status.endsWith('Failed'))
+        if (!body.status.endsWith('Failed') && body.status != 'Canceled')
         {
             var msg = statusMsg + body.status
             tl.debug(statusMsg + body.status);
