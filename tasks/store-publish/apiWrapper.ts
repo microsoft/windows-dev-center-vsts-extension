@@ -272,7 +272,14 @@ export function withRetry<T>(
             }
         }
 
-        if (numRetries > 0 && !errPredicate)
+        if (numRetries <= 0)
+        {
+            /* Don't wrap err in an error because it's already an error
+            (.fail() is the equivalent of "catch" for promises) */
+            throw err;
+        }
+
+        if (errPredicate)
         {
             var shouldRetry = errPredicate(err);
 
@@ -289,9 +296,8 @@ export function withRetry<T>(
         }
         else
         {
-            /* Don't wrap err in an error because it's already an error
-            (.fail() is the equivalent of "catch" for promises) */
-            throw err;
+            // If there is no error predicate, assume that the caller wants to always retry.
+            return success;
         }
     });
 }
