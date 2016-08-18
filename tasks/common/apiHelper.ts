@@ -2,12 +2,7 @@
  * A helper for the Store API. Allows one to authenticate and perform requests through the API.
  */
 
-/// <reference path="../../typings/globals/form-data/index.d.ts" />
-/// <reference path="../../typings/globals/node-uuid/node-uuid-base/index.d.ts" />
-/// <reference path="../../typings/globals/node-uuid/node-uuid-cjs/index.d.ts" />
-/// <reference path="../../typings/globals/node-uuid/index.d.ts" />
-/// <reference path="../../typings/globals/q/index.d.ts" />
-/// <reference path="../../typings/globals/request/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import http = require('http'); // Only used for types
 

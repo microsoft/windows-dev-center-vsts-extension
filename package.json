@@ -8,13 +8,23 @@
     "type": "git",
     "url": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
   },
-  "dependencies": {},
+  "dependencies": {
+    "jszip": "^3.1.1",
+    "node-uuid": "^1.4.7",
+    "q": "^1.4.1",
+    "request": "^2.72.0",
+    "streamifier": "^0.1.1",
+    "vsts-task-lib": "^0.9.5"
+  },
   "devDependencies": {
     "del": "^2.2.2",
     "gulp": "^3.9.1",
+    "gulp-exec": "^2.1.2",
+    "gulp-multistream": "^0.1.0",
+    "gulp-rename": "^1.2.2",
     "gulp-tsc": "^1.2.0",
     "shelljs": "^0.7.3",
-    "yargs": "^4.8.1",
-    "vsts-task-lib": "^0.9.5"
+    "vsts-task-lib": "^0.9.5",
+    "yargs": "^4.8.1"
   }
 }

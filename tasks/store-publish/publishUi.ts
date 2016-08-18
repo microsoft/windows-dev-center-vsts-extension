@@ -2,7 +2,7 @@
  * Entry point for the Publish task. Gathers parameters and performs validation.
  */
 
-import api = require('./apiWrapper');
+import api = require('../common/apiHelper');
 import pub = require('./publish');
 
 import fs = require('fs');

@@ -3,11 +3,10 @@
  * and publishes to the Store.
  */
 
-/// <reference path="../../typings/globals/node/index.d.ts" />
-/// <reference path="../../typings/globals/request/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
-import api = require('./apiWrapper');
+import api = require('../common/apiHelper');
 
 import fs = require('fs');
 import path = require('path');

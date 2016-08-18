@@ -14,8 +14,8 @@
     ],
     "version": {
         "Major": "0",
-        "Minor": "7",
-        "Patch": "995"
+        "Minor": "9",
+        "Patch": "0"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Publish $(packagePath)",
@@ -112,7 +112,7 @@
     ],
     "execution": {
         "Node": {
-            "target": "publishUi.js",
+            "target": "local/publishUi.js",
             "argumentFormat": ""
         }
     }
