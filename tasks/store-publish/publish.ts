@@ -192,7 +192,7 @@ export async function publishTask(params: PublishParams)
     await commit(submissionResource.id);
 
     console.log('Polling submission...');
-    await pollSubmissionStatus(submissionResource.id);
+    await pollSubmissionStatus(submissionResource.id, submissionResource.targetPublishMode);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
@@ -756,9 +756,9 @@ function commit(submissionId: string): Q.Promise<void>
  * @param submissionResource The submission to poll
  * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
  */
-function pollSubmissionStatus(submissionId: string): Q.Promise<void>
+function pollSubmissionStatus(submissionId: string, targetPublishMode: string): Q.Promise<void>
 {
-    var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
+    var submissionCheckGenerator = () => checkSubmissionStatus(submissionId, targetPublishMode);
     return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
         // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
         !(is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
@@ -770,7 +770,7 @@ function pollSubmissionStatus(submissionId: string): Q.Promise<void>
         }
         else
         {
-            return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(submissionId));
+            return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(submissionId, targetPublishMode));
         }
     });
 }
@@ -794,11 +794,11 @@ function is400Error(err): boolean
  * @return A promise for the status of the submission: true for completed, false for not completed yet.
  * The promise will be rejected if an error occurs in the submission.
  */
-function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
+function checkSubmissionStatus(submissionId: string, targetPublishMode: string): Q.Promise<boolean>
 {
     const statusMsg = 'Submission ' + submissionId + ' status for App ' + appId + ': ';
     const requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId,
+        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/status',
         method: 'GET'
     };
 
@@ -814,7 +814,7 @@ function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
             /* In immediate mode, we expect to get all the way to "Published" status.
              * In other modes, we stop at "Release" status. */
             return body.status == 'Published'
-                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
+                || (body.status == 'Release' && targetPublishMode != 'Immediate');
         }
         else
         {
