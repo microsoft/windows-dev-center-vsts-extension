@@ -2,7 +2,7 @@
  * Entry point for the Publish task. Gathers parameters and performs validation.
  */
 
-import api = require('../common/apiHelper');
+import request = require('../common/requestHelper');
 import pub = require('./publish');
 
 import fs = require('fs');
@@ -13,7 +13,7 @@ import tl = require('vsts-task-lib');
 /** Obtain and validate parameters from task UI. */
 function gatherParams()
 {
-    var credentials: api.Credentials;
+    var credentials: request.Credentials;
     var endpointId = tl.getInput('serviceEndpoint', true);
 
     /* Contrary to the other tl.get* functions, the boolean param here

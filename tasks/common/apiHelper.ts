@@ -1,380 +1,240 @@
-﻿/*
- * A helper for the Store API. Allows one to authenticate and perform requests through the API.
+/*
+ * A helper for the Store API. Contains logic to obtain App IDs from names, poll submissions,
+ * create files required by the API, etc.
  */
 
 /// <reference path="../../typings/index.d.ts" />
 
-import http = require('http'); // Only used for types
+import request = require('./requestHelper');
 
-import uuid = require('node-uuid');
+import fs = require('fs');
+import path = require('path');
+
+var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
-import request = require('request');
-var streamifier = require('streamifier'); // streamifier has no typings
+import stream = require('stream');
+import tl = require('vsts-task-lib');
 
-/** How long to wait between retries (in ms) */
-const RETRY_DELAY = 5000;
+/** The root of all API requests. */
+export var ROOT: string;
 
-/** After how long should a connection be given up (in ms). */
-const TIMEOUT = 180000;
-
-/** Block size of chunks uploaded to the blob (in bytes). */
-const UPLOAD_BLOCK_SIZE_BYTES = 1024 * 1024; // 1Mb
-
-/** Credentials used to gain access to a particular resource. */
-export interface Credentials
-{
-    /** The tenant ID associated with these credentials. */
-    tenant: string;
-
-    clientId: string;
-    clientSecret: string;
-}
-
-/** A token used to access a particular resource. */
-export interface AccessToken
-{
-    /** Resource to which this token grants access. */
-    resource: string
-
-    /** Credentials used to obtain access. */
-    credentials: Credentials;
-
-    /** Expiration timestamp of the token */
-    expiration: number;
-
-    /** Actual token to be used in the request. */
-    token: string;
-}
-
-/** Whether an access token should be renewed. */
-function isExpired(token: AccessToken): boolean
-{
-    // Date.now() returns a number in miliseconds.
-    // We say that a token is expired if its expiration date is at most five seconds in the future.
-    return (Date.now() / 1000) + 5 > token.expiration;
-}
-
-/** All the information given to us by the request module along a response. */
-export class ResponseInformation
-{
-    error: any;
-    response: http.IncomingMessage;
-    body: any;
-
-    constructor(_err: any, _res: http.IncomingMessage, _bod: any) 
-    {
-        this.error = _err;
-        this.response = _res;
-        this.body = _bod;
-    }
-
-    // For friendly logging
-    toString(): string
-    {
-        if (this.error != undefined)
-        {
-            return `Error ${JSON.stringify(this.error)}`;
-        }
-        else
-        {
-
-            var bodyToPrint = this.body;
-            if (typeof bodyToPrint != 'string')
-            {
-                bodyToPrint = JSON.stringify(bodyToPrint);
-            }
-
-            return `Status ${this.response.statusCode}: ${bodyToPrint}`;
-        }
-    }
-}
+/** How many times should we retry. */
+export const NUM_RETRIES = 5;
 
 /**
- * Perform a request with some default handling.
- *
- * For convenience, parses the body if the content-type is 'application/json'.
- * Further, examines the body and logs any errors or warnings.
- *
- * If an transport or application level error occurs, rejects the returned promise.
- * The reason given is an instance of @ResponseInformation@, containing the error
- * object, the response and the body.
- *
- * If no error occurs, resolves the returned promise with the body.
- *
- * @param options Options describing the request to execute.
- * @param stream If specified, pipe this stream into the request.
+ * The message used when a commit fails. Note that this does not need to be very
+ * informative since the user will see more details in additional messages.
  */
-export function performRequest<T>(
-    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-    stream?: NodeJS.ReadableStream):
-    Q.Promise<T>
-{
-    var deferred = Q.defer<T>();
-
-    if (options.timeout == undefined)
-    {
-        options.timeout = TIMEOUT;
-    }
-
-    var callback = function (error, response, body)
-    {
-        // For convenience, parse the body if it's JSON.
-        if (response != undefined && // response is undefined if a transport-level error occurs
-            response.headers['content-type'] != undefined &&   // content-type is undefined if there is no content
-            response.headers['content-type'].indexOf('application/json') != -1 &&
-            typeof body == 'string') // body might be an object if the options given to request already parsed it for us
-        {
-            body = JSON.parse(body);
-            logErrorsAndWarnings(body);
-        }
-
-        if (error || (response && response.statusCode >= 400))
-        {
-            deferred.reject(new ResponseInformation(error, response, body));
-        }
-        else
-        {
-            deferred.resolve(body);
-        }
-    }
-
-    if (!stream)
-    {
-        request(options, callback);
-    }
-    else
-    {
-        stream.pipe(request(options, callback));
-    }
-
-    return deferred.promise;
-}
+const COMMIT_FAILED_MSG = 'Commit failed';
 
 /**
- * Same as @performRequest@, but additionally requires an authentification token.
- * @param auth A token used to identify with the resource. If expired, it will be renewed before executing the request.
+ * Tries to obtain an app resource from the primary name of an app.
+ * This will only work with the primary name.
+ * @param givenAppName The app name for which we want to find the resource.
+ * @param currentPage Bookkeeping parameter to indicate at which point of the search we are.
+ *   This should not be given by the caller.
  */
-export function performAuthenticatedRequest<T>(
-    auth: AccessToken,
-    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
-    Q.Promise<T>
+export function getAppIdByName(token: request.AccessToken, appName: string, currentPage?: string): Q.Promise<string>
 {
-    // The expiration check is a function that returns a promise
-    var expirationCheck = function ()
+    if (currentPage === undefined)
     {
-        if (isExpired(auth))
-        {
-            return authenticate(auth.resource, auth.credentials).then(function (newAuth)
-            {
-                auth.token = newAuth.token;
-                auth.expiration = newAuth.expiration;
-            });
-        }
-        else
-        {
-            /* This looks strange, but it returns a promise for void, which is exactly what we need. */
-            return Q.when();
-        }
+        currentPage = 'applications';
+    }
+
+    tl.debug(`\tSearching for app ${appName} on ${currentPage}`);
+
+    var requestParams = {
+        url: ROOT + currentPage,
+        method: 'GET'
     };
 
-
-    return expirationCheck() // Call the expiration check to obtain a promise for it.
-        .then<T>(function () // Chain the use of the token to that promise.
+    return request.performAuthenticatedRequest<any>(token, requestParams).then(body =>
+    {
+        var foundAppResource = (<any[]>body.value).find(x => x.primaryName == appName);
+        if (foundAppResource)
         {
-            if (options.headers === undefined)
+            tl.debug(`App found with ${foundAppResource.id}`);
+            return foundAppResource;
+        }
+
+        if (body['@nextLink'] === undefined)
+        {
+            throw new Error(`No application with name "${appName}" was found`);
+        }
+
+        return getAppIdByName(token, appName, body['@nextLink']);
+    });
+}
+
+export function includePackagesInSubmission(packages: string[], submissionResource: any): void
+{
+    tl.debug(`Adding ${packages.length} package(s)`);
+    packages.map(makePackageEntry).forEach(packEntry =>
+    {
+        var entry = {
+            fileName: packEntry,
+            fileStatus: 'PendingUpload'
+        };
+
+        submissionResource.applicationPackages.push(entry);
+    });
+}
+
+/**
+ * Create a zip file containing the given list of packages.
+ * @param submissionResource
+ */
+export function createZipFromPackages(packages: string[])
+{
+    tl.debug(`Creating zip file`);
+    var zip = new JSZip();
+
+    packages.forEach((aPath, i) =>
+    {
+        // According to JSZip documentation, the directory separator used is a forward slash.
+        var entry = makePackageEntry(aPath, i).replace(/\\/g, '/');
+        tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
+        zip.file(entry, fs.createReadStream(aPath), { compression: 'DEFLATE' });
+    });
+
+    return zip;
+}
+
+/**
+ * Polls the status of a submission
+ * @param submissionResource The submission to poll
+ * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
+ */
+export function pollSubmissionStatus(token: request.AccessToken, resourceLocation: string): Q.Promise<void>
+{
+    const POLL_DELAY = 10000;
+    var submissionCheckGenerator = () => checkSubmissionStatus(token, resourceLocation);
+    return request.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
+        // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
+        !(request.is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
+        then(status =>
+        {
+            if (status)
             {
-                options.headers = {
-                    'Authorization': 'Bearer ' + auth.token
-                }
+                return;
             }
             else
             {
-                options.headers['Authorization'] = 'Bearer ' + auth.token;
+                return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(token, resourceLocation));
             }
-
-            return performRequest<T>(options);
         });
 }
 
 /**
- * @param resource The resource (URL) to authenticate to.
- * @param credentials Credentials to use for authentication.
- * @returns Promises an access token to use to communicate with the resource.
+ * Checks the status of a submission.
+ * @param submissionId
+ * @return A promise for the status of the submission: true for completed, false for not completed yet.
+ * The promise will be rejected if an error occurs in the submission.
  */
-export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
+function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string): Q.Promise<boolean>
 {
-    var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
-    var requestParams = {
-        grant_type: 'client_credentials',
-        client_id: credentials.clientId,
-        client_secret: credentials.clientSecret,
-        resource: resource
+    const statusMsg = `Submission status for "${resourceLocation}"`;// + submissionId + ' status for App ' + appId + ': ';
+    const requestParams = {
+        url: ROOT + resourceLocation, //
+        method: 'GET'
     };
 
-    var options = {
-        url: endpoint,
-        method: 'POST',
-        form: requestParams
-    };
-
-    console.log('Authenticating with server...');
-    return performRequest<any>(options).then<AccessToken>(body =>
+    return request.performAuthenticatedRequest<any>(token, requestParams).then(function (body)
     {
-        var tok: AccessToken = {
-            resource: resource,
-            credentials: credentials,
-            expiration: body.expires_on,
-            token: body.access_token
-        };
-
-        return tok;
-    });
-}
-
-/**
- * Transforms a promise so that it is tried again a specific number of times if it fails.
- *
- * A 'generator' of promises must be supplied. The reason is that if a promise fails,
- * then it will stay in a failed state and it won't be possible to await on it anymore.
- * Therefore a new promise must be returned every time.
- *
- * @param numRetries How many times should the promise be tried to be fulfilled.
- * @param promiseGenerator A function that will generate the promise to try to fulfill.
- * @param errPredicate In case an error occurs, receives the reason and returns whether to continue retrying
- */
-export function withRetry<T>(
-    numRetries: number,
-    promiseGenerator: () => Q.Promise<T>,
-    errPredicate?: ((err: any) => boolean)): Q.Promise<T>
-{
-    return promiseGenerator().fail(err =>
-    {
-        if (numRetries > 0 && (!errPredicate || errPredicate(err)))
+        /* Once the previous request has finished, examine the body to tell if we should start a new one. */
+        if (!body.status.endsWith('Failed'))
         {
-            console.log(`Operation failed with ${err}`);
-            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
-            return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
+            var msg = statusMsg + body.status
+            tl.debug(statusMsg + body.status);
+            console.log(msg);
+
+            /* In immediate mode, we expect to get all the way to "Published" status.
+             * In other modes, we stop at "Release" status. */
+            return body.status == 'Published'
+                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
         }
         else
         {
-            /* Don't wrap err in an error because it's already an error
-            (.fail() is the equivalent of "catch" for promises) */
-            throw err;
+            tl.error(statusMsg + ' failed with ' + body.status);
+            tl.error('Reported errors: ');
+            for (var i = 0; i < body.statusDetails.errors.length; i++)
+            {
+                var errDetail = body.statusDetails.errors[i];
+                tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
+            }
+            throw new Error(COMMIT_FAILED_MSG);
         }
     });
 }
 
+
+
 /**
- * Uploads a file to the given Azure blob.
- * @param fileContents
+ * Creates a buffer to the given zip file.
+ */
+function createZipStream(zip): NodeJS.ReadableStream
+{
+    var zipGenerationOptions = {
+        base64: false,
+        compression: 'DEFLATE',
+        type: 'nodebuffer',
+        streamFiles: true
+    };
+
+    return zip.generateNodeStream(zipGenerationOptions);
+}
+
+/**
+ * Write the given zip file to disk and to the given Azure blob.
+ * @param zip
+ * @param filePath
  * @param blobUrl
  */
-export function uploadAzureFile(fileContents: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
+export function persistZip(zip, filePath: string, blobUrl: string): Q.Promise<void>
 {
-    var promisesForBlocks = Q(uploadAzureFileBlocks(fileContents, blobUrl));
+    var buf: NodeJS.ReadableStream = createZipStream(zip);
 
-    return promisesForBlocks.then(blockList =>
-    {
-        // Once all blocks have been uploaded, tell Azure the order they should be in.
-        console.log('\t... All blocks uploaded.');
+    /* We want to pipe the zip stream to two different streams, since uploading the zip
+       attaches events to the stream itself. */
+    var netPassthrough = new stream.PassThrough();
 
-        var body =
-              '<?xml version="1.0" encoding="utf-8"?><BlockList>'
-            + blockList.map(s => `<Latest>${s}</Latest>`).join('')
-            + '</BlockList>';
+    buf.pipe(fs.createWriteStream(filePath));
 
-        var options = {
-            url: blobUrl + '&comp=blocklist',
-            body: body,
-            method: 'PUT'
-        }
-
-        return withRetry(5, () => performRequest<void>(options));
-    });
+    console.log('Uploading zip file...');
+    buf.pipe(netPassthrough)
+    return uploadZip(netPassthrough, blobUrl);
 }
 
 /**
- * Uploads a file chunk by chunk to the given Azure blob.
- * @return A promise for the list of block IDs uploaded
+ * Uploads a zip file to the appropriate blob.
+ * @param zip A buffer containing the zip file
+ * @return A promise for the upload of the zip file.
  */
-async function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUrl: string)
+function uploadZip(zip: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
 {
-    var requestParams = {
-        url: '',
-        method: 'PUT',
-        headers: {
-            'x-ms-blob-type': 'BlockBlob'
-        }
-    }
+    
+    tl.debug(`Uploading zip file to ${blobUrl}`);
 
-    /* The reason why we have promises for promises here is because we're really doing two levels async operations at once.
-       We're reading the file, and kicking off web requests as we go along.
-       The 'outer' promise is for reading the file. This happens chunk by chunk, and each chunk is immediately sent off into
-       a web request. The 'inner' promises are thus for the upload of each chunk.
+    /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
+     * base64 parameter. There is no good way to fix this, because we don't really know how to
+     * distinguish between 'correct' uses of those characters, and their spurious instances in
+     * the base64 parameter. In our case, we just take the compromise of replacing every instance
+     * of '+' with its url-encoded counterpart. */
+    var dest = blobUrl.replace(/\+/g, '%2B');
 
-       Thankfully this is hidden from users of this function.
-    */
-    var deferred = Q.defer<Q.Promise<string>[]>();
-
-    const fileGuid = uuid.v4().replace(/\-/g, '');
-    var blockPromises: Q.Promise<string>[] = [];
-    var currentBlockId = 0;
-
-    fileContents.on('readable', () =>
-    {
-        var block: string | Buffer;
-
-        while ((block = fileContents.read(UPLOAD_BLOCK_SIZE_BYTES)) !== null)
-        {
-            requestParams.headers['content-length'] = block.length;
-
-            // Sequence number with leading zeros.
-            // Note: will not work if we need more than a million blocks
-            // Note 2: with current block size, a million blocks is one terabyte.
-            var sequence = ('000000' + currentBlockId).substr(-6);
-            var base64Id = new Buffer(fileGuid + '-' + sequence).toString('base64');
-            requestParams.url = blobUrl + '&comp=block&blockid=' + base64Id;
-
-            console.log(`\tUploading block ${currentBlockId} (ID ${base64Id})`);
-            currentBlockId++;
-
-            /* When doing a multipart form request, the request module erroneously (?) adds some headers like
-             * content-disposition to the __contents__ of the data, which corrupts the file. Therefore we have
-             * to use this instead, where the block is piped from a stream to the put request. */
-            var blockPromiseGenerator = () => performRequest(requestParams, streamifier.createReadStream(block)).thenResolve(base64Id);
-
-            /* Also allow retries. We don't expect Azure to be down. If it is, we should normally have failed in a previous step. */
-            var blockPromise = withRetry(5, blockPromiseGenerator);
-            blockPromises.push(blockPromise);
-        }
-    }).on('end', () =>
-    {
-        deferred.resolve(blockPromises);
-    });
-
-    blockPromises = await deferred.promise;
-    return Q.all(blockPromises);
+    return request.uploadAzureFile(zip, dest);
 }
 
 
-/** 
- * Examines a response body and logs errors and warnings.
- * @param body A body in the format given by the Store API
- * (Where body.errors and body.warnings are arrays of objects
- * containing a 'code' and 'details' attribute).
+/**
+ * Transform a package path into a package entry for the zip file.
+ * All leading directories are removed and replaced by the index. E.g.
+ *
+ * ['foo/anAppx', 'bar/anAppx', 'baz/quux/aXap'].map(makePackageEntry)
+ *      => ['0/anAppx', '1/anAppx', '2/aXap']
  */
-function logErrorsAndWarnings(body: any)
+function makePackageEntry(pack: string, i: number): string
 {
-    if (body.errors != undefined && body.errors.length > 0)
-    {
-        console.error('Errors occurred in request');
-        (<any[]>body.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
-    }
-
-    if (body.warnings != undefined && body.warnings.length > 0)
-    {
-        console.warn('Warnings occurred in request');
-        (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
-    }
+    return path.join(i.toString(), path.basename(pack));
 }
 

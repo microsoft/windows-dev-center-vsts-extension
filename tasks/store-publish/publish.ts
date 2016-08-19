@@ -6,16 +6,13 @@
 /// <reference path="../../typings/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
+import request = require('../common/requestHelper');
 import api = require('../common/apiHelper');
 
 import fs = require('fs');
 import path = require('path');
-import os = require('os');
 
-var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
-import request = require('request');
-import stream = require('stream');
 import tl = require('vsts-task-lib');
 
 /** How to update the app metadata */
@@ -44,7 +41,7 @@ export interface CorePublishParams
     endpoint: string;
 
     /** The credentials used to authenticate to the store. */
-    authentication: api.Credentials;
+    authentication: request.Credentials;
 
     /**
      * If true, delete any pending submissions before starting a new one.
@@ -94,15 +91,6 @@ export function hasAppId(p: PublishParams): p is ParamsWithAppId
     return (<ParamsWithAppId>p).appId != undefined;
 }
 
-/** The root of all API requests */
-var ROOT: string;
-
-/** The delay between requests when polling for the submission status, in miliseconds. */
-const POLL_DELAY = 10000;
-
-/** How many times should we retry. */
-const NUM_RETRIES = 5;
-
 /** The following attributes are considered as lists of strings and not just strings. */
 const STRING_ARRAY_ATTRIBUTES =
     {
@@ -110,12 +98,6 @@ const STRING_ARRAY_ATTRIBUTES =
         features: true,
         recommendedhardware: true
     };
-
-/**
- * The message used when a commit fails. Note that this does not need to be very
- * informative since the user will see more details in additional messages.
- */
-const COMMIT_FAILED_MSG = 'Commit failed';
 
 /**
  * A little part of the URL to the API that contains a version number.
@@ -130,7 +112,7 @@ const API_URL_VERSION_PART = '/v1.0/my/';
 var taskParams: PublishParams;
 
 /** The current token used for authentication. */
-var currentToken: api.AccessToken;
+var currentToken: request.AccessToken;
 
 /** The app ID we are publishing to */
 var appId: string;
@@ -145,10 +127,10 @@ export async function publishTask(params: PublishParams)
     /* We expect the endpoint part of this to not have a slash at the end.
      * This is because authenticating to 'endpoint/' will give us an
      * invalid token, while authenticating to 'endpoint' will work */
-    ROOT = taskParams.endpoint + API_URL_VERSION_PART;
+    api.ROOT = taskParams.endpoint + API_URL_VERSION_PART;
 
     console.log('Authenticating...');
-    currentToken = await api.authenticate(taskParams.endpoint, taskParams.authentication);
+    currentToken = await request.authenticate(taskParams.endpoint, taskParams.authentication);
 
     console.log('Obtaining app information...');
     var appResource = await getAppResource();
@@ -169,124 +151,79 @@ export async function publishTask(params: PublishParams)
     await putMetadata(submissionResource);
 
     console.log('Creating zip file...');
-    var zip = createZip(taskParams.packages, submissionResource);
+    var zip = api.createZipFromPackages(taskParams.packages); //, submissionResource
+    addImagesToZip(submissionResource, zip);
+
     // There might be no files in the zip if the user didn't supply any packages or images.
-    // If there are files, write the file locally and also upload it.
+    // If there are files, persist the file.
     if (Object.keys(zip.files).length > 0)
     {
-        var buf: NodeJS.ReadableStream = createZipStream(zip);
-
-        /* We want to pipe the zip stream to two different streams, since uploading the zip
-           attaches events to the stream itself. */
-        var netPassthrough = new stream.PassThrough();
-
-        buf.pipe(fs.createWriteStream(taskParams.zipFilePath));
-
-        console.log('Uploading zip file...');
-        buf.pipe(netPassthrough)
-        await uploadZip(netPassthrough, submissionResource.fileUploadUrl);
+        await api.persistZip(zip, taskParams.zipFilePath, submissionResource.fileUploadUrl);
     }
 
     console.log('Committing submission...');
     await commit(submissionResource.id);
 
     console.log('Polling submission...');
-    await pollSubmissionStatus(submissionResource.id);
+    var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
+    await api.pollSubmissionStatus(currentToken, resourceLocation);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
 
 /**
- * Obtain an app resource from the store, either from the app name or the app id
- * (depending on what was given to us)
+ * @return Promises the resource associated with the application given to the task.
  */
-function getAppResource(): Q.Promise<any>
+async function getAppResource()
 {
+    var appId;
     if (hasAppId(taskParams))
     {
-        // If we have an app ID then we can directly obtain its information
-        tl.debug(`Getting app information (by app ID) for ${taskParams.appId}`);
-        var requestParams = {
-            url: ROOT + 'applications/' + taskParams.appId,
-            method: 'GET'
-        };
-
-        return api.performAuthenticatedRequest<any>(currentToken, requestParams);
+        appId = taskParams.appId;
     }
     else 
     {
-        // Otherwise go look for it through the pages of apps, using the primary name we got.
-        tl.debug(`Getting app information (by app name) for ${taskParams.appName}`);
-        return getAppResourceFromName(taskParams.appName);
-    }
-}
-
-/**
- * Tries to obtain an app resource from the primary name of an app.
- * This will only work with the primary name.
- * @param givenAppName The app name for which we want to find the resource.
- * @param currentPage Bookkeeping parameter to indicate at which point of the search we are.
- *   This should not be given by the caller.
- */
-function getAppResourceFromName(givenAppName: string, currentPage?: string): Q.Promise<any>
-{
-    if (currentPage === undefined)
-    {
-        currentPage = 'applications';
+        tl.debug(`Getting app ID from name ${taskParams.appName}`);
+        appId = await api.getAppIdByName(currentToken, taskParams.appName);
     }
 
-    tl.debug(`\tSearching for app ${givenAppName} on ${currentPage}`);
-
+    tl.debug(`Getting app resource from ID ${appId}`);
     var requestParams = {
-        url: ROOT + currentPage,
+        url: api.ROOT + 'applications/' + appId,
         method: 'GET'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(body =>
-    {
-        var foundAppResource = (<any[]>body.value).find(x => x.primaryName == givenAppName);
-        if (foundAppResource)
-        {
-            tl.debug(`App found with ${foundAppResource.id}`);
-            return foundAppResource;
-        }
-
-        if (body['@nextLink'] === undefined)
-        {
-            throw new Error(`No application with name "${givenAppName}" was found`);
-        }
-
-        return getAppResourceFromName(givenAppName, body['@nextLink']);
-    });
+    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
 }
 
+
 /**
- * If the 'force' parameter is turned on, checks whether a submission is already existing and
- * deletes it if it's the case.
- * @param appResource
- * @return A promise for the deletion of the submission
+ * @return Promises the deletion of a resource
  */
 function deleteSubmission(submissionLocation: string): Q.Promise<void>
 {
     tl.debug(`Deleting submission ${submissionLocation}`);
     var requestParams = {
-        url: ROOT + submissionLocation,
+        url: api.ROOT + submissionLocation,
         method: 'DELETE'
     };
 
-    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
-/** Creates a submission for a given app. Promises the submission resource. */
+/** 
+ * Creates a submission for a given app.
+ * @return Promises the new submission resource.
+ */
 function createSubmission(): Q.Promise<any>
 {
     tl.debug('Creating new submission');
     var requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions',
+        url: api.ROOT + 'applications/' + appId + '/submissions',
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams);
+    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
 }
 
 /**
@@ -307,19 +244,10 @@ function putMetadata(submissionResource: any): Q.Promise<void>
     }
 
     // Also at this point add the given packages to the list of packages to upload.
-    tl.debug(`Adding ${taskParams.packages.length} package(s)`);
-    taskParams.packages.map(makePackageEntry).forEach(packEntry =>
-    {
-        var entry = {
-            fileName: packEntry,
-            fileStatus: 'PendingUpload'
-        };
-
-        submissionResource.applicationPackages.push(entry);
-    });
+    api.includePackagesInSubmission(taskParams.packages, submissionResource);
 
     var requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,
+        url: api.ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,
         method: 'PUT',
         json: true, // Sets content-type and length for us, and parses the request/response appropriately
         body: submissionResource
@@ -327,8 +255,8 @@ function putMetadata(submissionResource: any): Q.Promise<void>
 
     tl.debug(`Performing metadata update`);
 
-    var putGenerator = () => api.performAuthenticatedRequest<void>(currentToken, requestParams);
-    return api.withRetry(NUM_RETRIES, putGenerator, err => !is400Error(err));
+    var putGenerator = () => request.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return request.withRetry(api.NUM_RETRIES, putGenerator, err => !request.is400Error(err));
 }
 
 /**
@@ -432,7 +360,6 @@ function updateListingImages(submissionResource: any, listing: string)
         updateImageMetadata(platOverrideRef.images, platPath);
     }
 }
-
 
 /**
  * Construct a listing whose root is in the given path. This listing includes a base listing and
@@ -629,38 +556,6 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
 }
 
 /**
- * Create a zip file containing the information 
- * @param submissionResource
- */
-function createZip(packages: string[], submissionResource: any)
-{
-    tl.debug(`Creating zip file`);
-    var zip = new JSZip();
-    addPackagesToZip(packages, zip);
-    addImagesToZip(submissionResource, zip);
-    return zip;
-}
-
-/**
- * Add the given packages to the given zip file.
- * Each package is placed under its own directory that is named by the index of the
- * package in this list. This is to prevent name collisions.
- * @see makePackageEntry
- */
-function addPackagesToZip(packages: string[], zip): void
-{
-    var currentFiles = {};
-
-    packages.forEach((aPath, i) =>
-    {
-        // According to JSZip documentation, the directory separator used is a forward slash.
-        var entry = makePackageEntry(aPath, i).replace(/\\/g, '/');
-        tl.debug(`Adding package path ${aPath} to zip as ${entry}`);
-        zip.file(entry, fs.createReadStream(aPath), { compression: 'DEFLATE' });
-    });
-}
-
-/**
  * Add any PendingUpload images in the given submission resource to the given zip file.
  */
 function addImagesToZip(submissionResource: any, zip)
@@ -701,133 +596,27 @@ function addImagesToZipFromListing(images: any[], zip)
 }
 
 /**
- * Creates a buffer to the given zip file.
- */
-function createZipStream(zip): NodeJS.ReadableStream
-{
-    var zipGenerationOptions = {
-        base64: false,
-        compression: 'DEFLATE',
-        type: 'nodebuffer',
-        streamFiles: true
-    };
-
-    return zip.generateNodeStream(zipGenerationOptions);
-}
-
-/**
- * Uploads a zip file to the appropriate blob.
- * @param zip A buffer containing the zip file
- * @return A promise for the upload of the zip file.
- */
-function uploadZip(zip: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
-{
-    tl.debug(`Uploading zip file to ${blobUrl}`);
-
-    /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
-     * base64 parameter. There is no good way to fix this, because we don't really know how to
-     * distinguish between 'correct' uses of those characters, and their spurious instances in
-     * the base64 parameter. In our case, we just take the compromise of replacing every instance
-     * of '+' with its url-encoded counterpart. */
-    var dest = blobUrl.replace(/\+/g, '%2B');
-
-    return api.uploadAzureFile(zip, dest);
-}
-
-
-
-/**
  * Commits a submission, checking for any errors.
  * @return A promise for the commit of the submission
  */
 function commit(submissionId: string): Q.Promise<void>
 {
     var requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
+        url: api.ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
         method: 'POST'
     };
 
-    return api.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
-/**
- * Polls the status of a submission
- * @param submissionResource The submission to poll
- * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
- */
-function pollSubmissionStatus(submissionId: string): Q.Promise<void>
-{
-    var submissionCheckGenerator = () => checkSubmissionStatus(submissionId);
-    return api.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
-        // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
-        !(is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
-        then(status =>
-    {
-        if (status)
-        {
-            return;
-        }
-        else
-        {
-            return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(submissionId));
-        }
-    });
-}
 
-/** Indicates whether the given object is an HTTP response for a 4xx error. */
-function is400Error(err): boolean
-{
-    // Does this look like a ResponseInformation?
-    if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
-    {
-        return err.response.statusCode >= 400
-            && err.response.statusCode < 500
-    }
 
-    return false;
-}
 
-/**
- * Checks the status of a submission.
- * @param submissionId
- * @return A promise for the status of the submission: true for completed, false for not completed yet.
- * The promise will be rejected if an error occurs in the submission.
- */
-function checkSubmissionStatus(submissionId: string): Q.Promise<boolean>
-{
-    const statusMsg = 'Submission ' + submissionId + ' status for App ' + appId + ': ';
-    const requestParams = {
-        url: ROOT + 'applications/' + appId + '/submissions/' + submissionId,
-        method: 'GET'
-    };
 
-    return api.performAuthenticatedRequest<any>(currentToken, requestParams).then(function (body)
-    {
-        /* Once the previous request has finished, examine the body to tell if we should start a new one. */
-        if (!body.status.endsWith('Failed'))
-        {
-            var msg = statusMsg + body.status
-            tl.debug(statusMsg + body.status);
-            console.log(msg);
-
-            /* In immediate mode, we expect to get all the way to "Published" status.
-             * In other modes, we stop at "Release" status. */
-            return body.status == 'Published'
-                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
-        }
-        else
-        {
-            tl.error(statusMsg + ' failed with ' + body.status);
-            tl.error('Reported errors: ');
-            for (var i = 0; i < body.statusDetails.errors.length; i++)
-            {
-                var errDetail = body.statusDetails.errors[i];
-                tl.error('\t ' + errDetail.code + ': ' + errDetail.details);
-            }
-            throw new Error(COMMIT_FAILED_MSG);
-        }
-    });
-}
+// ===
+// The functions below, while general, are here because they only apply to dealing with metadata.
+// As such, they don't need to accessible to other tasks.
+// ===
 
 function existsAndIsDir(aPath: string)
 {
@@ -928,17 +717,4 @@ function mergeObjects(dest: any, source: any, ignoreCase: boolean): void
 function splitAnyNewline(str: string): string[]
 {
     return str.replace(/\r\n/g, '\n').split('\n').filter(s => s.trim().length > 0);
-}
-
-
-/**
- * Transform a package path into a package entry for the zip file.
- * All leading directories are removed and replaced by the index. E.g.
- *
- * ['foo/anAppx', 'bar/anAppx', 'baz/quux/aXap'].map(makePackageEntry)
- *      => ['0/anAppx', '1/anAppx', '2/aXap']
- */
-function makePackageEntry(pack: string, i: number): string
-{
-    return path.join(i.toString(), path.basename(pack));
 }
