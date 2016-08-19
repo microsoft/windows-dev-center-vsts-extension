@@ -1,0 +1,98 @@
+﻿{
+    "id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc ",
+    "name": "store-flight",
+    "friendlyName": "Windows Store - Flight",
+    "description": "Make a flight submission to the Windows Store",
+    "author": "Microsoft Corporation",
+    "category": "Deploy",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "demands": [
+        "node.js"
+    ],
+    "version": {
+        "Major": "0",
+        "Minor": "1",
+        "Patch": "0"
+    },
+    "minimumAgentVersion": "1.83.0",
+    "instanceNameFormat": "Flight $(packagePath)",
+    "inputs": [
+        {
+            "name": "serviceEndpoint",
+            "type": "connectedService:devCenter",
+            "label": "Service endpoint",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials"
+        },
+        {
+            "name": "nameType",
+            "type": "pickList",
+            "label": "App identification method",
+            "helpMarkDown": "How to determine the app to publish",
+            "defaultValue": "AppId",
+            "options": {
+                "AppId": "ID",
+                "AppName": "Primary name"
+            }
+        },
+        {
+            "name": "appId",
+            "type": "string",
+            "label": "Application ID",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the application, found in the URL for the application's page on the Dev Center",
+            "visibleRule": "nameType = AppId"
+        },
+        {
+            "name": "appName",
+            "type": "string",
+            "label": "Application primary name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Primary name of the application, found at the top of the application's page on the Dev Center",
+            "visibleRule": "nameType = AppName"
+        },
+        {
+            "name": "flightName",
+            "type": "string",
+            "label": "Flight name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Name of the flight as seen on the Dev Center"
+        },
+        {
+            "name": "force",
+            "type": "boolean",
+            "label": "Delete pending submissions",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
+        },
+        {
+            "name": "packagePath",
+            "type": "filePath",
+            "label": "Package file",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "Path to the application's package"
+        },
+        {
+            "name": "additionalPackages",
+            "type": "multiLine",
+            "label": "Additional package(s)",
+            "required": false,
+            "helpMarkDown": "Paths to any additional packages required by this application (one path per line)."
+        }
+    ],
+    "execution": {
+        "Node": {
+            "target": "local/flightUi.js",
+            "argumentFormat": ""
+        }
+    }
+}
