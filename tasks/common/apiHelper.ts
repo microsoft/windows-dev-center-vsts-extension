@@ -15,6 +15,12 @@ import Q = require('q');
 import stream = require('stream');
 import tl = require('vsts-task-lib');
 
+/**
+ * A little part of the URL to the API that contains a version number.
+ * This may need to be updated in the future to comply with the API.
+ */
+export const API_URL_VERSION_PART = '/v1.0/my/';
+
 /** The root of all API requests. */
 export var ROOT: string;
 
@@ -54,7 +60,7 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
         if (foundAppResource)
         {
             tl.debug(`App found with ${foundAppResource.id}`);
-            return foundAppResource;
+            return foundAppResource.id;
         }
 
         if (body['@nextLink'] === undefined)

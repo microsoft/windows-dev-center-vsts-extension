@@ -100,12 +100,6 @@ const STRING_ARRAY_ATTRIBUTES =
     };
 
 /**
- * A little part of the URL to the API that contains a version number.
- * This may need to be updated in the future to comply with the API.
- */
-const API_URL_VERSION_PART = '/v1.0/my/';
-
-/**
  * The parameters given to the task. They're declared here to be
  * available to every step of the task without explicitly threading them through.
  */
@@ -127,7 +121,7 @@ export async function publishTask(params: PublishParams)
     /* We expect the endpoint part of this to not have a slash at the end.
      * This is because authenticating to 'endpoint/' will give us an
      * invalid token, while authenticating to 'endpoint' will work */
-    api.ROOT = taskParams.endpoint + API_URL_VERSION_PART;
+    api.ROOT = taskParams.endpoint + api.API_URL_VERSION_PART;
 
     console.log('Authenticating...');
     currentToken = await request.authenticate(taskParams.endpoint, taskParams.authentication);
@@ -151,7 +145,7 @@ export async function publishTask(params: PublishParams)
     await putMetadata(submissionResource);
 
     console.log('Creating zip file...');
-    var zip = api.createZipFromPackages(taskParams.packages); //, submissionResource
+    var zip = api.createZipFromPackages(taskParams.packages);
     addImagesToZip(submissionResource, zip);
 
     // There might be no files in the zip if the user didn't supply any packages or images.
