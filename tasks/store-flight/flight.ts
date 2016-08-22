@@ -115,25 +115,87 @@ export async function flightTask(params: FlightParams)
 
 function getFlightResource(flightName: string, currentPage?: string): Q.Promise<any>
 {
-    throw new Error('Unimplemented');
+    if (currentPage === undefined)
+    {
+        currentPage = `applications/${appId}/listflights`;
+    }
+
+    tl.debug(`\tSearching for flight ${flightName} on ${currentPage}`);
+
+    var requestParams = {
+        url: api.ROOT + currentPage,
+        method: 'GET'
+    };
+
+    return request.performAuthenticatedRequest<any>(currentToken, requestParams).then(body =>
+    {
+        var foundFlightResource = (<any[]>body.value).find(x => x.friendlyName == flightName);
+        if (foundFlightResource)
+        {
+            tl.debug(`Flight found with ID ${foundFlightResource.flightId}`);
+            return foundFlightResource;
+        }
+
+        if (body['@nextLink'] === undefined)
+        {
+            throw new Error(`No flight with name "${flightName}" was found`);
+        }
+
+        return getFlightResource(flightName, body['@nextLink']);
+    });
 }
 
+/** Promises the deletion of a flight submission resource */
 function deleteFlightSubmission(location: string): Q.Promise<void>
 {
-    throw new Error('Unimplemented');
+    tl.debug(`Deleting flight submission at ${location}`);
+    var requestParams = {
+        url: api.ROOT + location,
+        method: 'DELETE'
+    };
+
+    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
+/** Promises a resource for a new flight submission. */
 function createFlightSubmission(): Q.Promise<any>
 {
-    throw new Error('Unimplemented');
+    tl.debug('Creating new flight submission');
+    var requestParams = {
+        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions`,
+        method: 'POST'
+    };
+
+    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
 }
 
+/**
+ * Adds packages to a flight submission resource as Pending Upload, then commits the submission.
+ * @return Promises the update of the submission resource.
+ */
 function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 {
-    throw new Error('Unimplemented');
+    tl.debug(`Updating flight submission ${flightSubmissionResource.id}`);
+    api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource);
+
+    var requestParams = {
+        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`,
+        method: 'PUT',
+        json: true, // Sets content-type and length for us, and parses the request/response appropriately
+        body: flightSubmissionResource
+    };
+
+    tl.debug(`Performing metadata update`);
+    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
 
+/** Promises the committing of the given flight submission. */
 function commitFlightSubmission(flightSubmissionId: string): Q.Promise<void>
 {
-    throw new Error('Unimplemented');
+    var requestParams = {
+        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionId}`,
+        method: 'POST'
+    };
+
+    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
 }
