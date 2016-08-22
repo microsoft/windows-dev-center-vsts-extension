@@ -160,7 +160,7 @@ export async function publishTask(params: PublishParams)
 
     console.log('Polling submission...');
     var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
-    await api.pollSubmissionStatus(currentToken, resourceLocation);
+    await api.pollSubmissionStatus(currentToken, resourceLocation, submissionResource.targetPublishMode);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }

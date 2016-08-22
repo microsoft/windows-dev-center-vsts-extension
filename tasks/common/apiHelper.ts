@@ -111,10 +111,10 @@ export function createZipFromPackages(packages: string[])
  * @param submissionResource The submission to poll
  * @return A promise that will be fulfilled if the commit is successful, and rejected if the commit fails.
  */
-export function pollSubmissionStatus(token: request.AccessToken, resourceLocation: string): Q.Promise<void>
+export function pollSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<void>
 {
     const POLL_DELAY = 10000;
-    var submissionCheckGenerator = () => checkSubmissionStatus(token, resourceLocation);
+    var submissionCheckGenerator = () => checkSubmissionStatus(token, resourceLocation, publishMode);
     return request.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
         // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
         !(request.is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
@@ -126,7 +126,7 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
             }
             else
             {
-                return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(token, resourceLocation));
+                return Q.delay(POLL_DELAY).then(() => pollSubmissionStatus(token, resourceLocation, publishMode));
             }
         });
 }
@@ -137,11 +137,11 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
  * @return A promise for the status of the submission: true for completed, false for not completed yet.
  * The promise will be rejected if an error occurs in the submission.
  */
-function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string): Q.Promise<boolean>
+function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<boolean>
 {
-    const statusMsg = `Submission status for "${resourceLocation}"`;// + submissionId + ' status for App ' + appId + ': ';
+    const statusMsg = `Submission status for "${resourceLocation}"`;
     const requestParams = {
-        url: ROOT + resourceLocation, //
+        url: ROOT + resourceLocation + '/status',
         method: 'GET'
     };
 
@@ -157,7 +157,7 @@ function checkSubmissionStatus(token: request.AccessToken, resourceLocation: str
             /* In immediate mode, we expect to get all the way to "Published" status.
              * In other modes, we stop at "Release" status. */
             return body.status == 'Published'
-                || (body.status == 'Release' && body.targetPublishMode != 'Immediate');
+                || (body.status == 'Release' && publishMode != 'Immediate');
         }
         else
         {
