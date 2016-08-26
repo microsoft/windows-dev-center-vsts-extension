@@ -233,5 +233,7 @@ appMetadata
 
 ## Contact us 
 
+If you have questions, send us an email [here](mailto:wdcrsppt@microsoft.com).
+
 [Click here](https://github.com/Microsoft/windows-dev-center-vsts-extension/issues) to report a bug or make a
 suggestion.  

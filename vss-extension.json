@@ -51,6 +51,9 @@
         },
         "license": {
             "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/LICENSE"
+        },
+        "support": {
+            "uri": "mailto:wdcrsppt@microsoft.com"
         }
     },
     "contributions": [
