@@ -1,16 +1,14 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.7.995",
+    "version": "0.7.996",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
     "categories": [
         "Build and release"
     ],
-    "galleryFlags": [
-        "Preview"
-    ],
+    "galleryFlags": [],
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services.Cloud"

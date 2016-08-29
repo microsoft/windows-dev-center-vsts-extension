@@ -37,7 +37,7 @@ gulp.task('extension-metadata', function() {
         .src([EXTENSION_MANIFEST
             , 'images/*.png'            // Extension logo
             , 'ThirdPartyNotices.txt'   // 3rd-party notices
-            , 'vsts-details.md'         // Information to appear on the marketplace page
+            , 'README.md'               // Information to appear on the marketplace page
             ],
             { base: '.'})
         .pipe(gulp.dest(BUILD_DIR));
@@ -56,6 +56,11 @@ gulp.task('package', ['compile', 'task-metadata', 'extension-metadata', 'task-de
     if (argv.publisher)
     {
         cmd += ' --publisher ' + argv.publisher;
+    }
+
+    if (argv.public)
+    {
+        cmd += ' --override {\\"public\\": true}';
     }
 
     exec(cmd, callback);
