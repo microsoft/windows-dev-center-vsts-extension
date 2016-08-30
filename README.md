@@ -43,7 +43,7 @@ Once you have obtained your credentials, you must configure them in VSTS so that
 
 2. In the pop-up box, fill in your credentials in the corresponding text boxes (**Azure Tenant ID**, **Client ID** and **Client Secret**). For the **Connection Name**, you can pick any name of your choosing. For the **Server URL**, use the default value "<https://manage.devcenter.microsoft.com/>". 
  
-![Screenshot of the "Add new Windows Dev Center Connection" dialog](./docs/new_endpoint.png)
+![Screenshot of the "Add new Windows Dev Center Connection" dialog](docs/new_endpoint.png)
  
 3. Click **OK** to confirm. Your endpoint is now configured and will be accessible by the extension's tasks. 
 
@@ -51,7 +51,7 @@ Once you have obtained your credentials, you must configure them in VSTS so that
  
 This extension provides release tasks. You can access them from your project by clicking the **Release** tab, and selecting an existing release definition or [creating one](https://www.visualstudio.com/en-us/docs/release/author-release-definition/more-release-definition). Select your chosen environment, then click **Add tasks**. The tasks contributed by this extension are in the **Deploy** section.
 
-![Screenshot of the "Add tasks" dialog, with the "Windows Store - Publish" task highlighted](./docs/add_task.png)
+![Screenshot of the "Add tasks" dialog, with the "Windows Store - Publish" task highlighted](docs/add_task.png)
 
 ## Task reference 
  
@@ -59,7 +59,7 @@ This extension provides release tasks. You can access them from your project by 
  
 This task allows you to publish your app on the Store by creating a submission on Dev Center. It has the following parameters:
 
-![Screenshot of the UI for the "Publish" task](./docs/publish_task_ui.png)
+![Screenshot of the UI for the "Publish" task](docs/publish_task_ui.png)
  
 * Service endpoint - The endpoint containing the credentials you wish to use. Typically this will be the endpoint you created when [configuring your credentials](#configuring-your-credentials). 
 

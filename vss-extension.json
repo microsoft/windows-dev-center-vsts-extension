@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.7.997",
+    "version": "0.7.998",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -34,6 +34,10 @@
         },
         {
             "path": "images/logo.png",
+            "addressable": true
+        },
+        {
+            "path": "docs",
             "addressable": true
         }
     ],

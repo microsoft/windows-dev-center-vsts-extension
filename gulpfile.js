@@ -38,6 +38,7 @@ gulp.task('extension-metadata', function() {
             , 'images/*.png'            // Extension logo
             , 'ThirdPartyNotices.txt'   // 3rd-party notices
             , 'README.md'               // Information to appear on the marketplace page
+            , 'docs/**/*'               // Copy all content to be addressed by documentation
             ],
             { base: '.'})
         .pipe(gulp.dest(BUILD_DIR));
