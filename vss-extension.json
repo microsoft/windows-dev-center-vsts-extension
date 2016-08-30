@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.7.996",
+    "version": "0.7.997",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
