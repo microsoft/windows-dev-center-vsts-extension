@@ -5,6 +5,7 @@
 
 /// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/request/index.d.ts" />
+/// <reference path="../../typings/globals/minimatch/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
 import api = require('./apiWrapper');
@@ -214,7 +215,7 @@ function getAppResource(): Q.Promise<any>
 
         return api.performAuthenticatedRequest<any>(currentToken, requestParams);
     }
-    else 
+    else
     {
         // Otherwise go look for it through the pages of apps, using the primary name we got.
         tl.debug(`Getting app information (by app name) for ${taskParams.appName}`);
@@ -452,7 +453,7 @@ function makeListing(listingAbsPath: string): any
         tl.debug('Obtaining base listing');
         baseListing = getListingAttributes(basePath);
     }
-    
+
 
     // Check for platform overrides.
     var overridesPath = path.join(listingAbsPath, 'platformOverrides');
@@ -523,7 +524,7 @@ function getListingAttributes(listingWithPlatAbsPath: string): any
             var contents = fs.readFileSync(txtPath, 'utf-8');
 
             // Based on whether this is an array or string attribute, split or not.
-            var propName = path.basename(propPath, '.txt'); 
+            var propName = path.basename(propPath, '.txt');
             listing[propName] = STRING_ARRAY_ATTRIBUTES[propName.toLowerCase()] ? splitAnyNewline(contents) : contents;
         });
 
@@ -591,7 +592,7 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
 
     if (taskParams.metadataUpdateType == MetadataUpdateType.JsonMetadata)
     {
-        
+
         var jsonPath = path.join(imagesAbsPath, imageName + '.metadata.json');
         tl.debug(`Loading attributes for ${imageAbsName} from ${jsonPath}`);
         image = requireAbsoluteOrRelative(jsonPath);
@@ -630,7 +631,7 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
 }
 
 /**
- * Create a zip file containing the information 
+ * Create a zip file containing the information
  * @param submissionResource
  */
 function createZip(packages: string[], submissionResource: any)
