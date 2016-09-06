@@ -2,6 +2,7 @@
  * A helper for the Store API. Allows one to authenticate and perform requests through the API.
  */
 
+/// <reference path="../../typings/globals/node/index.d.ts" />
 /// <reference path="../../typings/globals/form-data/index.d.ts" />
 /// <reference path="../../typings/globals/node-uuid/node-uuid-base/index.d.ts" />
 /// <reference path="../../typings/globals/node-uuid/node-uuid-cjs/index.d.ts" />
@@ -66,7 +67,7 @@ export class ResponseInformation
     response: http.IncomingMessage;
     body: any;
 
-    constructor(_err: any, _res: http.IncomingMessage, _bod: any) 
+    constructor(_err: any, _res: http.IncomingMessage, _bod: any)
     {
         this.error = _err;
         this.response = _res;
@@ -362,7 +363,7 @@ async function uploadAzureFileBlocks(fileContents: NodeJS.ReadableStream, blobUr
 }
 
 
-/** 
+/**
  * Examines a response body and logs errors and warnings.
  * @param body A body in the format given by the Store API
  * (Where body.errors and body.warnings are arrays of objects
