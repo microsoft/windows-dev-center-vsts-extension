@@ -9,6 +9,7 @@ import fs = require('fs');
 import path = require('path');
 
 import tl = require('vsts-task-lib');
+var glob = require('glob');
 
 /** Obtain and validate parameters from task UI. */
 function gatherParams()
@@ -47,9 +48,14 @@ function gatherParams()
     var packages: string[] = [];
     if (inputFilePathSupplied('packagePath', false))
     {
-        packages.push(tl.getInput('packagePath', false));
+        packages = packages.concat(resolvePathPattern(tl.getInput('packagePath', false)));
     }
-    packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
+    var additionalPackages = tl.getDelimitedInput('additionalPackages', '\n', false);
+    additionalPackages.forEach(packageInput =>
+        {
+            packages = packages.concat(resolvePathPattern(packageInput));
+        }
+    )
     taskParams.packages = packages.filter(p => p.trim().length != 0);
 
     // App identification
@@ -111,6 +117,24 @@ function canonicalizePath(aPath: string): string
 
     return path.normalize(path.format(pathObj));
 }
+
+/**
+* Get appropriate files from the provided pattern
+* @param {string} path The minimatch pattern of glob to be resolved to file paths
+* @returns {string[]} file paths resolved by glob
+*/
+function resolvePathPattern(pathPattern: string) : string[] {
+    var filesList: string[] = [];
+    if (pathPattern) {
+        // Remove un-necessary quotes in path pattern, if any.
+        pathPattern = pathPattern.replace(/\"/g, "");
+
+        filesList = filesList.concat(glob.sync(pathPattern));
+    }
+
+    return filesList;
+}
+
 
 function dumpParams(taskParams: pub.PublishParams): void
 {
