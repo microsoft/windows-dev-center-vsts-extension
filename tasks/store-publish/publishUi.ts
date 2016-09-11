@@ -123,10 +123,11 @@ function canonicalizePath(aPath: string): string
 * @param {string} path The minimatch pattern of glob to be resolved to file paths
 * @returns {string[]} file paths resolved by glob
 */
-function resolvePathPattern(pathPattern: string) : string[] {
+function resolvePathPattern(pathPattern: string) : string[] 
+{
     var filesList: string[] = [];
     if (pathPattern) {
-        // Remove un-necessary quotes in path pattern, if any.
+        // Remove unnecessary quotes in path pattern, if any.
         pathPattern = pathPattern.replace(/\"/g, "");
 
         filesList = filesList.concat(glob.sync(pathPattern));
