@@ -75,9 +75,9 @@ This task allows you to publish your app on the Store by creating a submission o
  
 * Metadata path (*File path, required if visible*) - Path to a directory containing the metadata to update (appears when selecting another option than *No Update* for the metadata update method). The expected format is detailed [below](#metadata-format). 
  
-* Package path (*File path, optional*) - Path to your app's main package (usually a file in .appx, .xap or .appxbundle format).
+* Package path (*File path, optional*) - Path to your app's main package (usually a file in .appx, .xap or .appxbundle format). Minimatch pattern is supported.
  
-* Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. 
+* Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Minimatch pattern is supported. 
 
 You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
  
