@@ -77,7 +77,7 @@ This task allows you to publish your app on the Store by creating a submission o
  
 * Package path (*File path, optional*) - Path to your app's main package (usually a file in .appx, .xap or .appxbundle format). Minimatch pattern is supported.
  
-* Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Minimatch pattern is supported. 
+* Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Each individual path supports Minimatch pattern. 
 
 You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
  
