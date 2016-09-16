@@ -72,17 +72,17 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
     });
 }
 
-export function includePackagesInSubmission(packages: string[], submissionResource: any): void
+export function includePackagesInSubmission(givenPackages: string[], submissionPackages): void
 {
-    tl.debug(`Adding ${packages.length} package(s)`);
-    packages.map(makePackageEntry).forEach(packEntry =>
+    tl.debug(`Adding ${givenPackages.length} package(s)`);
+    givenPackages.map(makePackageEntry).forEach(packEntry =>
     {
         var entry = {
             fileName: packEntry,
             fileStatus: 'PendingUpload'
         };
 
-        submissionResource.applicationPackages.push(entry);
+        submissionPackages.push(entry);
     });
 }
 
@@ -191,24 +191,42 @@ function createZipStream(zip): NodeJS.ReadableStream
 }
 
 /**
+ * Creates a zip file using given zip stream.
+ */
+function createZipFile(zipStream : NodeJS.ReadableStream, filename : string) : Q.Promise<string> {
+    var defer = Q.defer<string>();
+
+    zipStream.pipe(fs.createWriteStream(filename))
+            .on('finish', function() {
+                defer.resolve();
+            })
+            .on('error', function(err) {
+                defer.reject(`Failed to create {filename}. Error = {err}`);
+            });
+
+    return defer.promise;
+}
+
+/**
  * Write the given zip file to disk and to the given Azure blob.
  * @param zip
  * @param filePath
  * @param blobUrl
  */
-export function persistZip(zip, filePath: string, blobUrl: string): Q.Promise<void>
+export async function persistZip(zip, filePath: string, blobUrl: string)
 {
     var buf: NodeJS.ReadableStream = createZipStream(zip);
 
     /* We want to pipe the zip stream to two different streams, since uploading the zip
        attaches events to the stream itself. */
-    var netPassthrough = new stream.PassThrough();
+    // var netPassthrough = new stream.PassThrough();
 
-    buf.pipe(fs.createWriteStream(filePath));
+    await createZipFile(buf, filePath);
 
     console.log('Uploading zip file...');
-    buf.pipe(netPassthrough)
-    return uploadZip(netPassthrough, blobUrl);
+    
+    //buf.pipe(netPassthrough)
+    return uploadZip(fs.createReadStream(filePath), blobUrl);
 }
 
 /**

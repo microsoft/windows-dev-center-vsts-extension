@@ -238,7 +238,7 @@ function putMetadata(submissionResource: any): Q.Promise<void>
     }
 
     // Also at this point add the given packages to the list of packages to upload.
-    api.includePackagesInSubmission(taskParams.packages, submissionResource);
+    api.includePackagesInSubmission(taskParams.packages, submissionResource.applicationPackages);
 
     var requestParams = {
         url: api.ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,

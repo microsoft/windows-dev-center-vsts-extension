@@ -99,7 +99,7 @@ export async function flightTask(params: FlightParams)
     var zip = api.createZipFromPackages(taskParams.packages);
     if (Object.keys(zip.files).length > 0)
     {
-        await api.persistZip(zip, taskParams.zipFilePath, flightSubmissionResource.flieUploadUrl);
+        await api.persistZip(zip, taskParams.zipFilePath, flightSubmissionResource.fileUploadUrl);
     }
 
     console.log('Committing flight submission...');
@@ -150,7 +150,7 @@ function deleteFlightSubmission(location: string): Q.Promise<void>
 {
     tl.debug(`Deleting flight submission at ${location}`);
     var requestParams = {
-        url: api.ROOT + location,
+        url: `${api.ROOT}applications/${appId}/${location}`,
         method: 'DELETE'
     };
 
@@ -176,7 +176,7 @@ function createFlightSubmission(): Q.Promise<any>
 function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 {
     tl.debug(`Updating flight submission ${flightSubmissionResource.id}`);
-    api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource);
+    api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource.flightPackages);
 
     var requestParams = {
         url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`,
@@ -193,7 +193,7 @@ function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 function commitFlightSubmission(flightSubmissionId: string): Q.Promise<void>
 {
     var requestParams = {
-        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionId}`,
+        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionId}/commit`,
         method: 'POST'
     };
 
