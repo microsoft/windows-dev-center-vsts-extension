@@ -391,4 +391,3 @@ function logErrorsAndWarnings(body: any)
         (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
     }
 }
-

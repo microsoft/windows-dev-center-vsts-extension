@@ -79,14 +79,14 @@
             "label": "Package file",
             "defaultValue": "",
             "required": false,
-            "helpMarkDown": "Path to the application's package"
+            "helpMarkDown": "Path to the application's package you want to flight. Minimatch pattern is supported."
         },
         {
             "name": "additionalPackages",
             "type": "multiLine",
             "label": "Additional package(s)",
             "required": false,
-            "helpMarkDown": "Paths to any additional packages required by this application (one path per line)."
+            "helpMarkDown": "Paths to any additional packages required by this application (one path per line). Minimatch pattern is supported."
         }
     ],
     "execution": {

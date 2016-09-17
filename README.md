@@ -4,7 +4,7 @@ This extension provides tasks to automate the release of your Windows apps to th
 
 ## Quick start
 
-1. Ensure you meet the [Prerequisites](#prerequisites).
+1. Ensure you meet the [prerequisites](#prerequisites).
 
 2. [Install](https://marketplace.visualstudio.com/items?itemName=MS.RDX.MRO.windows-store-publish) the extension.
 
@@ -69,7 +69,7 @@ This task allows you to publish your app on the Store by creating a submission o
 
 * Application primary name / ID (*Text, required*) - The identification for the app. Depending on your selection, this should be either the app ID (visible in the URL of the app's page on Dev Center) or the app primary name (visible on the app's page on Dev Center).
 
-* Delete pending submissions (*Checkbox*) - If checked, will attempt to delete any in-progress submission before starting a new one. Note that only one submission at a time can be pending. Therefore, if this box is not checked and a submission is already pending, the task will fail. Furthermore, submissions created on the Dev Center UI cannot be deleted automatically by the task. 
+* Delete pending submissions (*Checkbox*) - If checked, will attempt to delete any in-progress submission before starting a new one. Note that only one submission at a time can be pending. Therefore, if this box is not checked and a submission is already pending, the task will fail. Furthermore, submissions created on the Dev Center UI cannot be deleted automatically by the task.
  
 * Metadata update method - How to update the app's metadata. Options are *No Update*, *Text Metadata* or *JSON-formatted Metadata*. In the first case, the app's metadata will not be changed from the previous submission. In the latter cases, the app's metadata will be updated according to the [expected format](#metadata-format). 
  
