@@ -2,10 +2,10 @@
  * Entry point for the Publish task. Gathers parameters and performs validation.
  */
 
+import inputHelper = require('../common/inputHelper');
 import request = require('../common/requestHelper');
 import pub = require('./publish');
 
-import fs = require('fs');
 import path = require('path');
 
 import tl = require('vsts-task-lib');
@@ -45,11 +45,17 @@ function gatherParams()
 
     // Packages
     var packages: string[] = [];
-    if (inputFilePathSupplied('packagePath', false))
+    if (inputHelper.inputFilePathSupplied('packagePath', false))
     {
-        packages.push(tl.getInput('packagePath', false));
+        packages = packages.concat(inputHelper.resolvePathPattern(tl.getInput('packagePath', false)));
     }
-    packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
+    var additionalPackages = tl.getDelimitedInput('additionalPackages', '\n', false);
+    additionalPackages.forEach(packageInput =>
+        {
+            packages = packages.concat(inputHelper.resolvePathPattern(packageInput));
+        }
+    )
+
     taskParams.packages = packages.filter(p => p.trim().length != 0);
 
     // App identification
@@ -67,49 +73,9 @@ function gatherParams()
         throw new Error(`Invalid name type ${nameType}`);
     }
 
-    taskParams.metadataRoot = canonicalizePath(tl.getPathInput('metadataPath', false, true));
-
+    taskParams.metadataRoot = inputHelper.canonicalizePath(tl.getPathInput('metadataPath', false, true));
 
     return taskParams;
-}
-
-/**
- * Verifies if the filePath input was supplied by comparing it with the working directory of the release.
- * 
- * VSTS will put by default the working directory as the value of an empty filePath input.
- * @param name The name of the input parameter;
- * @return true if the path was supplied, false if it is equal to the working directory;
- */
-function inputFilePathSupplied(name: string, required: boolean) : boolean
-{
-    var path = tl.getInput(name, required);
-    return path != tl.getVariable('Agent.ReleaseDirectory');
-}
-
-/**
- * Creates a canonical version of a path. Separators are converted to the current platform,
- * '.'.and '..' segments are resolved, and multiple contiguous separators are combined in one.
- * If a path contains both kinds of separators, it will be parsed as a posix path (with '/' separators).
- * 
- * For example, the paths 'foo//bar/../quux.txt' and 'foo\\.\\quux.txt' should have the same canonical
- * representation.
- *
- * This function should be idempotent: canonicalizePath(canonicalizePath(x)) === canonicalizePath(x))
- * @param aPath
- */
-function canonicalizePath(aPath: string): string
-{
-    var pathObj: path.ParsedPath;
-    if (aPath.indexOf('/') != -1)
-    {
-        pathObj = path.posix.parse(aPath);
-    }
-    else
-    {
-        pathObj = path.win32.parse(aPath);
-    }
-
-    return path.normalize(path.format(pathObj));
 }
 
 function dumpParams(taskParams: pub.PublishParams): void

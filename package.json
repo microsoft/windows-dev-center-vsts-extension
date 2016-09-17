@@ -9,6 +9,7 @@
     "url": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
   },
   "dependencies": {
+    "glob": "^7.0.3",
     "jszip": "^3.1.1",
     "node-uuid": "^1.4.7",
     "q": "^1.4.1",

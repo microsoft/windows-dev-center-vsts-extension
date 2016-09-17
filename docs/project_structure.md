@@ -29,7 +29,7 @@ having garbage in there.
 
 1. Create a directory in the tasks sub-folder.
 2. Add in it a task.json file. Create a new GUID to use as an ID for the task,
-and add that to task.json. In the ```execution.Node``` fi eld, make sure that the
+and add that to task.json. In the ```execution.Node``` field, make sure that the
 ```target``` points to your task's main file **with a .js extension** and that
 it is under a **local/** directory. Note that the file *itself* should be
 directly under the task directory; the build system will move it to a 'local'

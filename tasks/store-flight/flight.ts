@@ -1,5 +1,5 @@
 /*
- * Behavior for the Publish task. Takes authentication information, app information, and packages,
+ * Behavior for the Flight task. Takes authentication information, app information, and packages,
  * and flights to the Store.
  */
 
@@ -15,13 +15,24 @@ import tl = require('vsts-task-lib');
 /** Core parameters for the flight task. */
 export interface CoreFlightParams
 {
-    flightName: string;
-
-    // Same parameters as the publish task
     endpoint: string;
+
+    /**  Name of the flight we are publishing packages to */
+    flightName: string;
+    
+    /** The credentials used to authenticate to the store. */
     authentication: request.Credentials;
+
+    /**
+     * If true, delete any pending submissions before starting a new one.
+     * Otherwise, fail the task if a submission is pending.
+     */
     force: boolean;
+
+    /** A list of paths to the packages to be uploaded. */
     packages: string[];
+
+    /** A path where the zip file to be uploaded to the dev center will be stored. */
     zipFilePath: string;
 }
 
@@ -63,6 +74,9 @@ export async function flightTask(params: FlightParams)
 {
     taskParams = params;
 
+    /* We expect the endpoint part of this to not have a slash at the end.
+     * This is because authenticating to 'endpoint/' will give us an
+     * invalid token, while authenticating to 'endpoint' will work */
     api.ROOT = taskParams.endpoint + api.API_URL_VERSION_PART;
 
     console.log('Authenticating...');
@@ -80,9 +94,10 @@ export async function flightTask(params: FlightParams)
 
     console.log(`Obtaining flight resource for flight ${taskParams.flightName} in app ${appId}`);
     var flightResource = await getFlightResource(taskParams.flightName);
-    flightId = flightResource.flightId;
+    
+    flightId = flightResource.flightId; // Globally set app ID for future steps.
 
-
+    // Delete pending submission if force is turned on (only one pending submission can exist)
     if (taskParams.force && flightResource.pendingFlightSubmission != undefined)
     {
         console.log('Deleting existing flight submission...');
@@ -110,7 +125,6 @@ export async function flightTask(params: FlightParams)
     await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Flight submission completed');
-
 }
 
 function getFlightResource(flightName: string, currentPage?: string): Q.Promise<any>
@@ -148,25 +162,13 @@ function getFlightResource(flightName: string, currentPage?: string): Q.Promise<
 /** Promises the deletion of a flight submission resource */
 function deleteFlightSubmission(location: string): Q.Promise<void>
 {
-    tl.debug(`Deleting flight submission at ${location}`);
-    var requestParams = {
-        url: `${api.ROOT}applications/${appId}/${location}`,
-        method: 'DELETE'
-    };
-
-    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return api.deleteSubmission(currentToken, `${api.ROOT}applications/${appId}/${location}`);
 }
 
 /** Promises a resource for a new flight submission. */
 function createFlightSubmission(): Q.Promise<any>
 {
-    tl.debug('Creating new flight submission');
-    var requestParams = {
-        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions`,
-        method: 'POST'
-    };
-
-    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
+    return api.createSubmission(currentToken, `${api.ROOT}applications/${appId}/flights/${flightId}/submissions`);
 }
 
 /**
@@ -175,27 +177,14 @@ function createFlightSubmission(): Q.Promise<any>
  */
 function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 {
-    tl.debug(`Updating flight submission ${flightSubmissionResource.id}`);
     api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource.flightPackages);
 
-    var requestParams = {
-        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`,
-        method: 'PUT',
-        json: true, // Sets content-type and length for us, and parses the request/response appropriately
-        body: flightSubmissionResource
-    };
-
-    tl.debug(`Performing metadata update`);
-    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
+    var url = `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
+    return api.putSubmission(currentToken, url, flightSubmissionResource);
 }
 
 /** Promises the committing of the given flight submission. */
 function commitFlightSubmission(flightSubmissionId: string): Q.Promise<void>
 {
-    var requestParams = {
-        url: `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionId}/commit`,
-        method: 'POST'
-    };
-
-    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return api.commitSubmission(currentToken, `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionId}/commit`);
 }

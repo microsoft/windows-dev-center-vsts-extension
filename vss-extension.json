@@ -8,8 +8,8 @@
     "categories": [
         "Build and release"
     ],
-    "public": false,
-     "targets": [
+    "galleryFlags": [],
+    "targets": [
         {
             "id": "Microsoft.VisualStudio.Services.Cloud"
         }
@@ -22,7 +22,7 @@
     },
     "content": {
         "details": {
-            "path": "vsts-details.md"
+            "path": "README.md"
         }, 
         "thirdpartynotice": {
             "path": "ThirdPartyNotices.txt"
@@ -36,10 +36,31 @@
             "path": "store-flight"
         },
         {
+            "path": "docs",
+            "addressable": true
+        },
+        {
             "path": "images/logo.png",
             "addressable": true
         }
     ],
+    "tags": [
+        "Windows Store",
+        "Windows Dev Center",
+        "Publish",
+        "Deploy"
+    ],
+    "links": {
+        "learn": {
+            "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
+        },
+        "license": {
+            "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/LICENSE"
+        },
+        "support": {
+            "uri": "mailto:wdcrsppt@microsoft.com"
+        }
+    },
     "contributions": [
         {
             "id": "devCenterApiEndpoint",

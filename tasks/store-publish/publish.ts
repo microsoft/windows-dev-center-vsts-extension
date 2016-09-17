@@ -6,8 +6,8 @@
 /// <reference path="../../typings/index.d.ts" />
 /// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
 
-import request = require('../common/requestHelper');
 import api = require('../common/apiHelper');
+import request = require('../common/requestHelper');
 
 import fs = require('fs');
 import path = require('path');
@@ -135,11 +135,11 @@ export async function publishTask(params: PublishParams)
     if (taskParams.force && appResource.pendingApplicationSubmission != undefined)
     {
         console.log('Deleting existing submission...');
-        await deleteSubmission(appResource.pendingApplicationSubmission.resourceLocation);
+        await deleteAppSubmission(appResource.pendingApplicationSubmission.resourceLocation);
     }
 
     console.log('Creating submission...');
-    var submissionResource = await createSubmission();
+    var submissionResource = await createAppSubmission();
 
     console.log('Updating submission...');
     await putMetadata(submissionResource);
@@ -156,7 +156,7 @@ export async function publishTask(params: PublishParams)
     }
 
     console.log('Committing submission...');
-    await commit(submissionResource.id);
+    await commitAppSubmission(submissionResource.id);
 
     console.log('Polling submission...');
     var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
@@ -194,30 +194,27 @@ async function getAppResource()
 /**
  * @return Promises the deletion of a resource
  */
-function deleteSubmission(submissionLocation: string): Q.Promise<void>
+function deleteAppSubmission(submissionLocation: string): Q.Promise<void>
 {
-    tl.debug(`Deleting submission ${submissionLocation}`);
-    var requestParams = {
-        url: api.ROOT + submissionLocation,
-        method: 'DELETE'
-    };
-
-    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
+    return api.deleteSubmission(currentToken, api.ROOT + submissionLocation);
 }
 
 /** 
  * Creates a submission for a given app.
  * @return Promises the new submission resource.
  */
-function createSubmission(): Q.Promise<any>
+function createAppSubmission(): Q.Promise<any>
 {
-    tl.debug('Creating new submission');
-    var requestParams = {
-        url: api.ROOT + 'applications/' + appId + '/submissions',
-        method: 'POST'
-    };
+    return api.createSubmission(currentToken, api.ROOT + 'applications/' + appId + '/submissions');
+}
 
-    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
+/**
+ * Commits a submission, checking for any errors.
+ * @return A promise for the commit of the submission
+ */
+function commitAppSubmission(submissionId: string): Q.Promise<void>
+{
+    return api.commitSubmission(currentToken, api.ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit');
 }
 
 /**
@@ -240,17 +237,9 @@ function putMetadata(submissionResource: any): Q.Promise<void>
     // Also at this point add the given packages to the list of packages to upload.
     api.includePackagesInSubmission(taskParams.packages, submissionResource.applicationPackages);
 
-    var requestParams = {
-        url: api.ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id,
-        method: 'PUT',
-        json: true, // Sets content-type and length for us, and parses the request/response appropriately
-        body: submissionResource
-    };
+    var url = api.ROOT + 'applications/' + appId + '/submissions/' + submissionResource.id;
 
-    tl.debug(`Performing metadata update`);
-
-    var putGenerator = () => request.performAuthenticatedRequest<void>(currentToken, requestParams);
-    return request.withRetry(api.NUM_RETRIES, putGenerator, err => !request.is400Error(err));
+    return api.putSubmission(currentToken, url, submissionResource);
 }
 
 /**
@@ -588,21 +577,6 @@ function addImagesToZipFromListing(images: any[], zip)
         zip.file(filenameInZip, fs.createReadStream(imgPath), { compression: 'DEFLATE' });
     });
 }
-
-/**
- * Commits a submission, checking for any errors.
- * @return A promise for the commit of the submission
- */
-function commit(submissionId: string): Q.Promise<void>
-{
-    var requestParams = {
-        url: api.ROOT + 'applications/' + appId + '/submissions/' + submissionId + '/commit',
-        method: 'POST'
-    };
-
-    return request.performAuthenticatedRequest<void>(currentToken, requestParams);
-}
-
 
 
 

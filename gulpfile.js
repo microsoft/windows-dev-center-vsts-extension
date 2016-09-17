@@ -45,6 +45,11 @@ gulp.task('package', ['compile', '_task_metadata', '_extension_metadata', 'depen
         cmd += ' --publisher ' + argv.publisher;
     }
 
+    if (argv.public)
+    {
+        cmd += ' --override {\\"public\\": true}';
+    }
+
     exec(cmd, callback);
 });
 
@@ -81,7 +86,8 @@ gulp.task('_extension_metadata', function ()
         .src([EXTENSION_MANIFEST
             , 'images/*.png'            // Extension logo
             , 'ThirdPartyNotices.txt'   // 3rd-party notices
-            , 'vsts-details.md'         // Information to appear on the marketplace page
+            , 'README.md'               // Information to appear on the marketplace page
+            , 'docs/**/*'               // Copy all content to be addressed by documentation
             ],
             { base: '.'})
         .pipe(gulp.dest(BUILD_DIR));
@@ -161,7 +167,7 @@ gulp.task('_copy_common', ['_compile_only'], function ()
 });
 
 // Copy the master package.json file into each task folder in the build tree, so that
-// packages can be properly installed for each tas.
+// packages can be properly installed for each task.
 gulp.task('_copy_dependency_list', function ()
 {
     return gulp

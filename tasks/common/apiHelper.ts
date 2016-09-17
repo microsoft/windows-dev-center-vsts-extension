@@ -173,7 +173,71 @@ function checkSubmissionStatus(token: request.AccessToken, resourceLocation: str
     });
 }
 
+/**
+ * @return Promises the deletion of a resource
+ */
+export function deleteSubmission(token: request.AccessToken, url: string): Q.Promise<void>
+{
+    tl.debug(`Deleting submission at ${url}`);
+    var requestParams = {
+        url: url,
+        method: 'DELETE'
+    };
 
+    return request.performAuthenticatedRequest<void>(token, requestParams);
+}
+
+/** 
+ * Creates a submission for a given app.
+ * @return Promises the new submission resource.
+ */
+export function createSubmission(token: request.AccessToken, url: string): Q.Promise<any>
+{
+    tl.debug('Creating new submission');
+    var requestParams = {
+        url: url,
+        method: 'POST'
+    };
+
+    return request.performAuthenticatedRequest<any>(token, requestParams);
+}
+
+/** 
+ * Updates a submission for a given app.
+ * @returns A promise for the update of the submission on the server.
+ */
+export function putSubmission(token: request.AccessToken, url: string, submissionResource: any): Q.Promise<void>
+{
+    tl.debug(`Updating submission`);
+    
+    var requestParams = {
+        url: url,
+        method: 'PUT',
+        json: true, // Sets content-type and length for us, and parses the request/response appropriately
+        body: submissionResource
+    };
+
+    tl.debug(`Performing update`);
+    
+    var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
+}
+
+/**
+ * Commits a submission, checking for any errors.
+ * @return A promise for the commit of the submission
+ */
+export function commitSubmission(token: request.AccessToken, url: string): Q.Promise<void>
+{
+    tl.debug(`Committing submission`);
+
+    var requestParams = {
+        url: url,
+        method: 'POST'
+    };
+
+    return request.performAuthenticatedRequest<void>(token, requestParams);
+}
 
 /**
  * Creates a buffer to the given zip file.

@@ -62,7 +62,7 @@ export class ResponseInformation
     response: http.IncomingMessage;
     body: any;
 
-    constructor(_err: any, _res: http.IncomingMessage, _bod: any) 
+    constructor(_err: any, _res: http.IncomingMessage, _bod: any)
     {
         this.error = _err;
         this.response = _res;
@@ -371,7 +371,7 @@ export function is400Error(err): boolean
     return false;
 }
 
-/** 
+/**
  * Examines a response body and logs errors and warnings.
  * @param body A body in the format given by the Store API
  * (Where body.errors and body.warnings are arrays of objects

@@ -2,6 +2,7 @@
  * Entry point for the Flight task. Gathers parameters and performs validation.
  */
 
+import inputHelper = require('../common/inputHelper');
 import request = require('../common/requestHelper');
 import fli = require('./flight');
 
@@ -9,6 +10,7 @@ import path = require('path');
 
 import tl = require('vsts-task-lib');
 
+/** Obtain and validate parameters from task UI. */
 function gatherParams()
 {
     var credentials: request.Credentials;
@@ -18,11 +20,11 @@ function gatherParams()
         indicates whether the parameter is __optional__ */
     var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
     credentials =
-        {
-            tenant: endpointAuth.parameters['tenantId'],
-            clientId: endpointAuth.parameters['servicePrincipalId'],
-            clientSecret: endpointAuth.parameters['servicePrincipalKey']
-        };
+    {
+        tenant : endpointAuth.parameters['tenantId'],
+        clientId : endpointAuth.parameters['servicePrincipalId'],
+        clientSecret : endpointAuth.parameters['servicePrincipalKey']
+    };
 
     var endpointUrl: string = endpointAuth.parameters['url'];
     if (endpointUrl.lastIndexOf('/') == endpointUrl.length - 1)
@@ -42,11 +44,17 @@ function gatherParams()
 
     // Packages
     var packages: string[] = [];
-    if (inputFilePathSupplied('packagePath', false))
+    if (inputHelper.inputFilePathSupplied('packagePath', false))
     {
-        packages.push(tl.getInput('packagePath', false));
+        packages = packages.concat(inputHelper.resolvePathPattern(tl.getInput('packagePath', false)));
     }
-    packages = packages.concat(tl.getDelimitedInput('additionalPackages', '\n', false));
+    var additionalPackages = tl.getDelimitedInput('additionalPackages', '\n', false);
+    additionalPackages.forEach(packageInput =>
+        {
+            packages = packages.concat(inputHelper.resolvePathPattern(packageInput));
+        }
+    )
+
     taskParams.packages = packages.filter(p => p.trim().length != 0);
 
     if (taskParams.packages.length == 0)
@@ -69,14 +77,7 @@ function gatherParams()
         throw new Error(`Invalid name type ${nameType}`);
     }
 
-
     return taskParams;
-}
-
-function inputFilePathSupplied(name: string, required: boolean): boolean
-{
-    var path = tl.getInput(name, required);
-    return path != tl.getVariable('Agent.ReleaseDirectory');
 }
 
 function dumpParams(taskParams: fli.FlightParams): void
