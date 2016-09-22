@@ -56,7 +56,7 @@ function gatherParams()
         }
     )
 
-    taskParams.packages = packages.filter(p => p.trim().length != 0);
+    taskParams.packages = packages.map(p => p.trim()).filter(p => p.length != 0);
 
     // App identification
     var nameType = tl.getInput('nameType', true);
