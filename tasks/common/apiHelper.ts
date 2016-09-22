@@ -280,16 +280,8 @@ function createZipFile(zipStream : NodeJS.ReadableStream, filename : string) : Q
 export async function persistZip(zip, filePath: string, blobUrl: string)
 {
     var buf: NodeJS.ReadableStream = createZipStream(zip);
-
-    /* We want to pipe the zip stream to two different streams, since uploading the zip
-       attaches events to the stream itself. */
-    // var netPassthrough = new stream.PassThrough();
-
     await createZipFile(buf, filePath);
-
     console.log('Uploading zip file...');
-    
-    //buf.pipe(netPassthrough)
     return uploadZip(fs.createReadStream(filePath), blobUrl);
 }
 
