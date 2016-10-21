@@ -305,15 +305,17 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
     var urlObject = url.parse(dest);    
     
     var pathParts = urlObject.pathname.split("/");
+    //pathname property returns path with leading '/'. Thus, pathParts[0] will always be empty.
     var containerName = pathParts[1];
     var blobName = pathParts[2];
 
     var host = urlObject.host;
     var sasToken = urlObject.search;
-
-    var blobService = azure.createBlobServiceWithSas(host, sasToken);
+    var retryOperations = new azure.ExponentialRetryPolicyFilter();
+    var blobService = azure.createBlobServiceWithSas(host, sasToken).withFilter(retryOperations);
+    var options = { parallelOperationThreadCount: 5, timeoutIntervalInMs: 10000, maximumExecutionTimeInMs: 900000 };
     var defer = Q.defer();
-    blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, function (error, result, response) {
+    blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, options, function (error, result, response) {
         if (!error) {
             console.log("Successfully uploaded file!");
             defer.resolve();
