@@ -14,6 +14,8 @@ var JSZip = require('jszip'); // JSZip typings have not been updated to the vers
 import Q = require('q');
 import stream = require('stream');
 import tl = require('vsts-task-lib');
+var azure = require('azure-storage');
+var url = require('url'); 
 
 /**
  * A little part of the URL to the API that contains a version number.
@@ -282,27 +284,46 @@ export async function persistZip(zip, filePath: string, blobUrl: string)
     var buf: NodeJS.ReadableStream = createZipStream(zip);
     await createZipFile(buf, filePath);
     console.log('Uploading zip file...');
-    return uploadZip(fs.createReadStream(filePath), blobUrl);
+    return uploadZip(filePath, blobUrl);
 }
 
 /**
  * Uploads a zip file to the appropriate blob.
- * @param zip A buffer containing the zip file
+ * @param filePath Path of the zip file to upload
  * @return A promise for the upload of the zip file.
  */
-function uploadZip(zip: NodeJS.ReadableStream, blobUrl: string): Q.Promise<void>
+function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
 {
-    
     tl.debug(`Uploading zip file to ${blobUrl}`);
-
     /* The URL we get from the Store sometimes has unencoded '+' and '=' characters because of a
      * base64 parameter. There is no good way to fix this, because we don't really know how to
      * distinguish between 'correct' uses of those characters, and their spurious instances in
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
     var dest = blobUrl.replace(/\+/g, '%2B');
+    
+    var urlObject = url.parse(dest);    
+    
+    var pathParts = urlObject.pathname.split("/");
+    var containerName = pathParts[1];
+    var blobName = pathParts[2];
 
-    return request.uploadAzureFile(zip, dest);
+    var host = urlObject.host;
+    var sasToken = urlObject.search;
+
+    var blobService = azure.createBlobServiceWithSas(host, sasToken);
+    var defer = Q.defer();
+    blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, function (error, result, response) {
+        if (!error) {
+            console.log("Successfully uploaded file!");
+            defer.resolve();
+        }
+        else {
+            console.log(`Failed to upload file! Error = {error}`);
+            defer.reject(`Failed to upload file! Error = {error}`);
+        }
+    });
+    return defer.promise;
 }
 
 
