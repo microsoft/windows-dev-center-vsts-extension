@@ -313,7 +313,11 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
     var sasToken = urlObject.search;
     var retryOperations = new azure.ExponentialRetryPolicyFilter();
     var blobService = azure.createBlobServiceWithSas(host, sasToken).withFilter(retryOperations);
-    var options = { parallelOperationThreadCount: 5, timeoutIntervalInMs: 10000, maximumExecutionTimeInMs: 900000 };
+    var options = { 
+        parallelOperationThreadCount: 5, 
+        timeoutIntervalInMs: 10000, 
+        maximumExecutionTimeInMs: 900000 
+    };
     var defer = Q.defer();
     blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, options, function (error, result, response) {
         if (!error) {
