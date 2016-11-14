@@ -342,6 +342,6 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
  */
 function makePackageEntry(pack: string, i: number): string
 {
-    return path.join(i.toString(), path.basename(pack));
+    return i.toString() + "_" + path.basename(pack);
 }
 
