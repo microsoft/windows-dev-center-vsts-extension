@@ -4,7 +4,7 @@ This extension provides tasks to automate the release of your Windows apps to th
 
 ## Quick start
 
-1. Ensure you meet the [prerequistes](#prerequisites).
+1. Ensure you meet the [prerequisites](#prerequisites).
 
 2. [Install](https://marketplace.visualstudio.com/items?itemName=MS.RDX.MRO.windows-store-publish) the extension.
 
@@ -69,7 +69,7 @@ This task allows you to publish your app on the Store by creating a submission o
 
 * Application primary name / ID (*Text, required*) - The identification for the app. Depending on your selection, this should be either the app ID (visible in the URL of the app's page on Dev Center) or the app primary name (visible on the app's page on Dev Center).
 
-* Force (*Checkbox*) - If checked, will attempt to delete any in-progress submission before starting a new one. Note that only one submission at a time can be pending. Therefore, if this box is not checked and a submission is already pending, the task will fail. Furthermore, submissions created on the Dev Center UI cannot be deleted automatically by the task. 
+* Delete pending submissions (*Checkbox*) - If checked, will attempt to delete any in-progress submission before starting a new one. Note that only one submission at a time can be pending. Therefore, if this box is not checked and a submission is already pending, the task will fail. Furthermore, submissions created on the Dev Center UI cannot be deleted automatically by the task.
  
 * Metadata update method - How to update the app's metadata. Options are *No Update*, *Text Metadata* or *JSON-formatted Metadata*. In the first case, the app's metadata will not be changed from the previous submission. In the latter cases, the app's metadata will be updated according to the [expected format](#metadata-format). 
  
@@ -176,6 +176,29 @@ appMetadata
   └ baseListing 
     └ features.txt
 ``` 
+
+### Windows Store - Flight 
+ 
+This task allows you to publish your app to specified flight on the Store by creating a submission on Dev Center. It has the following parameters:
+
+![Screenshot of the UI for the "Flight" task](docs/flight_task_ui.png)
+ 
+* Service endpoint - The endpoint containing the credentials you wish to use. Typically this will be the endpoint you created when [configuring your credentials](#configuring-your-credentials). 
+
+* App identification method - How to identify the app to publish: by name or ID. If unsure, select "Primary name". 
+
+* Application primary name / ID (*Text, required*) - The identification for the app. Depending on your selection, this should be either the app ID (visible in the URL of the app's page on Dev Center) or the app primary name (visible on the app's page on Dev Center).
+
+* Delete pending submissions (*Checkbox*) - If checked, will attempt to delete any in-progress submission before starting a new one. Note that only one submission at a time can be pending. Therefore, if this box is not checked and a submission is already pending, the task will fail. Furthermore, submissions created on the Dev Center UI cannot be deleted automatically by the task. 
+
+* Flight name (*Text, required*) - Friendly name of the flight group (as seen on the Dev Center) that you want to update the submission for.
+
+* Package path (*File path, optional*) - Path to your app's main package (usually a file in .appx, .xap or .appxbundle format). Minimatch pattern is supported.
+ 
+* Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Each individual path supports Minimatch pattern. 
+
+You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
+You have to specify at least one package.
 
 ## Contact us 
 

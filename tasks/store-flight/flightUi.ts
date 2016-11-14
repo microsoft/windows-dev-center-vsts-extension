@@ -1,10 +1,10 @@
-﻿/**
- * Entry point for the Publish task. Gathers parameters and performs validation.
+/**
+ * Entry point for the Flight task. Gathers parameters and performs validation.
  */
 
 import inputHelper = require('../common/inputHelper');
 import request = require('../common/requestHelper');
-import pub = require('./publish');
+import fli = require('./flight');
 
 import path = require('path');
 
@@ -19,7 +19,7 @@ function gatherParams()
     /* Contrary to the other tl.get* functions, the boolean param here
         indicates whether the parameter is __optional__ */
     var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
-    credentials = 
+    credentials =
     {
         tenant : endpointAuth.parameters['tenantId'],
         clientId : endpointAuth.parameters['servicePrincipalId'],
@@ -32,15 +32,14 @@ function gatherParams()
         endpointUrl = endpointUrl.substring(0, endpointUrl.length - 1);
     }
 
-    var taskParams: pub.PublishParams = {
-        appName : '',
-        authentication : credentials,
-        endpoint : endpointUrl,
-        force : tl.getBoolInput('force', true),
-        metadataUpdateType: pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
-        updateImages: tl.getBoolInput('updateImages', false),
-        zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
-        packages : []
+    var taskParams: fli.FlightParams = {
+        appName: '',
+        flightName: tl.getInput('flightName', true),
+        authentication: credentials,
+        endpoint: endpointUrl,
+        force: tl.getBoolInput('force', true),
+        zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
+        packages: []
     };
 
     // Packages
@@ -58,30 +57,33 @@ function gatherParams()
 
     taskParams.packages = packages.map(p => p.trim()).filter(p => p.length != 0);
 
+    if (taskParams.packages.length == 0)
+    {
+        throw new Error(`At least one package must be provided`);
+    }
+
     // App identification
     var nameType = tl.getInput('nameType', true);
     if (nameType == 'AppId')
     {
-        (<pub.ParamsWithAppId>taskParams).appId = tl.getInput('appId', true);
+        (<fli.ParamsWithAppId>taskParams).appId = tl.getInput('appId', true);
     }
     else if (nameType == 'AppName')
     {
-        (<pub.ParamsWithAppName>taskParams).appName = tl.getInput('appName', true);
+        (<fli.ParamsWithAppName>taskParams).appName = tl.getInput('appName', true);
     }
     else
     {
         throw new Error(`Invalid name type ${nameType}`);
     }
 
-    taskParams.metadataRoot = inputHelper.canonicalizePath(tl.getPathInput('metadataPath', false, true));
-
     return taskParams;
 }
 
-function dumpParams(taskParams: pub.PublishParams): void
+function dumpParams(taskParams: fli.FlightParams): void
 {
     // We won't log the credentials, as they get masked by VSTS anyways.
-    if (pub.hasAppId(taskParams))
+    if (fli.hasAppId(taskParams))
     {
         tl.debug(`App ID: ${taskParams.appId}`);
     }
@@ -90,21 +92,19 @@ function dumpParams(taskParams: pub.PublishParams): void
         tl.debug(`App name: ${taskParams.appName}`);
     }
 
-    tl.debug(`Endpoint: ${taskParams.endpoint}`);
+    tl.debug(`Flight name: ${taskParams.flightName}`);
     tl.debug(`Force delete: ${taskParams.force}`);
-    tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
-    tl.debug(`Update images: ${taskParams.updateImages}`);
-    tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
+    tl.debug(`Local ZIP file path: ${taskParams.zipFilePath}`);
 }
 
 async function main()
 {
     try
     {
-        var taskParams: pub.PublishParams = gatherParams();
+        var taskParams: fli.FlightParams = gatherParams();
         dumpParams(taskParams);
-        await pub.publishTask(taskParams);
+        await fli.flightTask(taskParams);
     }
     catch (err)
     {

@@ -1,8 +1,8 @@
 ﻿{
-    "id": "8e70da9d-532d-4416-a07f-5ec10f84339f",
-    "name": "store-publish",
-    "friendlyName": "Windows Store - Publish",
-    "description": "Publish your app to the Windows Store",
+    "id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc ",
+    "name": "store-flight",
+    "friendlyName": "Windows Store - Flight",
+    "description": "Make a flight submission to the Windows Store",
     "author": "Microsoft Corporation",
     "category": "Deploy",
     "visibility": [
@@ -14,11 +14,11 @@
     ],
     "version": {
         "Major": "0",
-        "Minor": "9",
+        "Minor": "1",
         "Patch": "0"
     },
     "minimumAgentVersion": "1.83.0",
-    "instanceNameFormat": "Publish $(packagePath)",
+    "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
     "inputs": [
         {
             "name": "serviceEndpoint",
@@ -58,6 +58,14 @@
             "visibleRule": "nameType = AppName"
         },
         {
+            "name": "flightName",
+            "type": "string",
+            "label": "Flight name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Name of the flight as seen on the Dev Center"
+        },
+        {
             "name": "force",
             "type": "boolean",
             "label": "Delete pending submissions",
@@ -66,41 +74,12 @@
             "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
         },
         {
-            "name": "metadataUpdateMethod",
-            "type": "pickList",
-            "label": "Metadata update method",
-            "defaultValue": "NoUpdate",
-            "options": {
-                "NoUpdate": "No update",
-                "JsonMetadata": "JSON-formatted metadata",
-                "TextMetadata":  "Text metadata"
-            }
-        },
-        {
-            "name": "metadataPath",
-            "type": "filePath",
-            "label": "Metadata root folder",
-            "defaultValue": "",
-            "helpMarkDown": "Path to a directory containing the metadata. Consult the documentation for the expected format.",
-            "required": true,
-            "visibleRule": "metadataUpdateMethod != NoUpdate"
-        },
-        {
-            "name": "updateImages",
-            "type": "boolean",
-            "label": "Update images",
-            "defaultValue": false,
-            "helpMarkDown": "Whether images should also be updated. **Warning**: if you check this box, all the old images of the listings you provide will be deleted.",
-            "required": true,
-            "visibleRule": "metadataUpdateMethod != NoUpdate"
-        },
-        {
             "name": "packagePath",
             "type": "filePath",
             "label": "Package file",
             "defaultValue": "",
             "required": false,
-            "helpMarkDown": "Path to the application's package. Minimatch pattern is supported."
+            "helpMarkDown": "Path to the application's package you want to flight. Minimatch pattern is supported."
         },
         {
             "name": "additionalPackages",
@@ -112,7 +91,7 @@
     ],
     "execution": {
         "Node": {
-            "target": "local/publishUi.js",
+            "target": "local/flightUi.js",
             "argumentFormat": ""
         }
     }

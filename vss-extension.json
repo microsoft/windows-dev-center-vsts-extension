@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.7.999",
+    "version": "0.9.1",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -33,11 +33,14 @@
             "path": "store-publish"
         },
         {
-            "path": "images/logo.png",
-            "addressable": true
+            "path": "store-flight"
         },
         {
             "path": "docs",
+            "addressable": true
+        },
+        {
+            "path": "images/logo.png",
             "addressable": true
         }
     ],
@@ -137,6 +140,16 @@
             ],
             "properties": {
                 "name": "store-publish"
+            }
+        },
+        {
+            "id": "flight-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "store-flight"
             }
         }
     ]
