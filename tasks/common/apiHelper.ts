@@ -15,7 +15,7 @@ import Q = require('q');
 import stream = require('stream');
 import tl = require('vsts-task-lib');
 var azure = require('azure-storage');
-var url = require('url'); 
+var url = require('url');
 
 /**
  * A little part of the URL to the API that contains a version number.
@@ -189,7 +189,7 @@ export function deleteSubmission(token: request.AccessToken, url: string): Q.Pro
     return request.performAuthenticatedRequest<void>(token, requestParams);
 }
 
-/** 
+/**
  * Creates a submission for a given app.
  * @return Promises the new submission resource.
  */
@@ -204,14 +204,14 @@ export function createSubmission(token: request.AccessToken, url: string): Q.Pro
     return request.performAuthenticatedRequest<any>(token, requestParams);
 }
 
-/** 
+/**
  * Updates a submission for a given app.
  * @returns A promise for the update of the submission on the server.
  */
 export function putSubmission(token: request.AccessToken, url: string, submissionResource: any): Q.Promise<void>
 {
     tl.debug(`Updating submission`);
-    
+
     var requestParams = {
         url: url,
         method: 'PUT',
@@ -220,7 +220,7 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
     };
 
     tl.debug(`Performing update`);
-    
+
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
     return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
 }
@@ -267,7 +267,7 @@ function createZipFile(zipStream : NodeJS.ReadableStream, filename : string) : Q
                 defer.resolve();
             })
             .on('error', function(err) {
-                defer.reject(`Failed to create {filename}. Error = {err}`);
+                defer.reject(`Failed to create ${filename}. Error = ${err}`);
             });
 
     return defer.promise;
@@ -301,9 +301,9 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
     var dest = blobUrl.replace(/\+/g, '%2B');
-    
-    var urlObject = url.parse(dest);    
-    
+
+    var urlObject = url.parse(dest);
+
     var pathParts = urlObject.pathname.split("/");
     //pathname property returns path with leading '/'. Thus, pathParts[0] will always be empty.
     var containerName = pathParts[1];
@@ -313,10 +313,10 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
     var sasToken = urlObject.search;
     var retryOperations = new azure.ExponentialRetryPolicyFilter();
     var blobService = azure.createBlobServiceWithSas(host, sasToken).withFilter(retryOperations);
-    var options = { 
-        parallelOperationThreadCount: 5, 
-        timeoutIntervalInMs: 10000, 
-        maximumExecutionTimeInMs: 900000 
+    var options = {
+        parallelOperationThreadCount: 5,
+        timeoutIntervalInMs: 10000,
+        maximumExecutionTimeInMs: 900000
     };
     var defer = Q.defer();
     blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, options, function (error, result, response) {
@@ -325,8 +325,8 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
             defer.resolve();
         }
         else {
-            console.log(`Failed to upload file! Error = {error}`);
-            defer.reject(`Failed to upload file! Error = {error}`);
+            tl.error(`Failed to upload file! Error = ${error}`);
+            defer.reject(`Failed to upload file! Error = ${error}`);
         }
     });
     return defer.promise;
