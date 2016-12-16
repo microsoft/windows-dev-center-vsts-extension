@@ -11,7 +11,7 @@
     "galleryFlags": [],
     "targets": [
         {
-            "id": "Microsoft.VisualStudio.Services.Cloud"
+            "id": "Microsoft.VisualStudio.Services"
         }
     ],
     "scopes": [
@@ -23,7 +23,7 @@
     "content": {
         "details": {
             "path": "README.md"
-        }, 
+        },
         "thirdpartynotice": {
             "path": "ThirdPartyNotices.txt"
         }
