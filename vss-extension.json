@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.9.1",
+    "version": "0.9.2",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -11,7 +11,7 @@
     "galleryFlags": [],
     "targets": [
         {
-            "id": "Microsoft.VisualStudio.Services.Cloud"
+            "id": "Microsoft.VisualStudio.Services"
         }
     ],
     "scopes": [
@@ -23,7 +23,7 @@
     "content": {
         "details": {
             "path": "README.md"
-        }, 
+        },
         "thirdpartynotice": {
             "path": "ThirdPartyNotices.txt"
         }
