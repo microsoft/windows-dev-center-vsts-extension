@@ -315,7 +315,7 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
     var blobService = azure.createBlobServiceWithSas(host, sasToken).withFilter(retryOperations);
     var options = {
         parallelOperationThreadCount: 5,
-        timeoutIntervalInMs: 10000,
+        timeoutIntervalInMs: 90000,
         maximumExecutionTimeInMs: 900000
     };
     var defer = Q.defer();
