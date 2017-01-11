@@ -67,6 +67,12 @@ export interface CorePublishParams
 
     /** A path where the zip file to be uploaded to the dev center will be stored. */
     zipFilePath: string;
+
+    /** 
+     * If true, waiting to finish the submisons.
+     * Otherwise, not.
+     */
+    waiting: boolean;
 }
 
 export interface AppIdParam
@@ -158,9 +164,12 @@ export async function publishTask(params: PublishParams)
     console.log('Committing submission...');
     await commitAppSubmission(submissionResource.id);
 
-    console.log('Polling submission...');
-    var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
-    await api.pollSubmissionStatus(currentToken, resourceLocation, submissionResource.targetPublishMode);
+    if (taskParams.waiting)
+    {
+        console.log('Polling submission...');
+        var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
+        await api.pollSubmissionStatus(currentToken, resourceLocation, submissionResource.targetPublishMode);
+    }
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
