@@ -33,13 +33,15 @@ function gatherParams()
     }
 
     var taskParams: fli.FlightParams = {
+        appId: '',        
         appName: '',
         flightName: tl.getInput('flightName', true),
         authentication: credentials,
         endpoint: endpointUrl,
         force: tl.getBoolInput('force', true),
         zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
-        packages: []
+        packages: [],
+        waiting: tl.getBoolInput('waiting', true)
     };
 
     // Packages
@@ -96,6 +98,7 @@ function dumpParams(taskParams: fli.FlightParams): void
     tl.debug(`Force delete: ${taskParams.force}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
     tl.debug(`Local ZIP file path: ${taskParams.zipFilePath}`);
+    tl.debug(`Waiting: ${taskParams.waiting}`);
 }
 
 async function main()
