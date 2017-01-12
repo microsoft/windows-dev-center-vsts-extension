@@ -41,7 +41,7 @@ function gatherParams()
         force: tl.getBoolInput('force', true),
         zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages: [],
-        waiting: tl.getBoolInput('waiting', false)
+        waiting: tl.getBoolInput('waiting', true)
     };
 
     // Packages

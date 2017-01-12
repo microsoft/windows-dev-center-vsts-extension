@@ -91,9 +91,10 @@
         {
             "name": "waiting",
             "type": "boolean",
-            "label": "Waiting to finish",
-            "defaultValue": false,
-            "required": true
+            "label": "Waiting to Release",
+            "defaultValue": true,
+            "required": true,
+            "helpMarkDown": "It may take several hours."
         }
     ],
     "execution": {

@@ -42,7 +42,7 @@ function gatherParams()
         updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : [],
-        waiting: tl.getBoolInput('waiting', false)
+        waiting: tl.getBoolInput('waiting', true)
     };
 
     // Packages
