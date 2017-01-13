@@ -66,6 +66,14 @@
             "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
         },
         {
+            "name": "deleteCurrentPackages",
+            "type": "boolean",
+            "label": "Delete current packages",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Delete current packages(*.appx,*.appxupload) from submission"
+        },
+        {
             "name": "metadataUpdateMethod",
             "type": "pickList",
             "label": "Metadata update method",

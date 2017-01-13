@@ -49,6 +49,9 @@ export interface CorePublishParams
      */
     force: boolean;
 
+    /** If true, delete any current packages from submission. Otherwise, leave current packages and add new packages. */
+    deleteCurrentPackages: boolean;
+
     metadataUpdateType: MetadataUpdateType;
 
     /**
@@ -232,6 +235,14 @@ function putMetadata(submissionResource: any): Q.Promise<void>
         taskParams.metadataRoot)
     {
         updateMetadata(submissionResource);
+    }
+
+    if (taskParams.deleteCurrentPackages)
+    {
+        submissionResource.applicationPackages.forEach(package => 
+        {
+            package.fileStatus = 'PendingDelete';
+        });
     }
 
     // Also at this point add the given packages to the list of packages to upload.

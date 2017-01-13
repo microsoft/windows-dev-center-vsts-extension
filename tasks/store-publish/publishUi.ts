@@ -37,6 +37,7 @@ function gatherParams()
         authentication : credentials,
         endpoint : endpointUrl,
         force : tl.getBoolInput('force', true),
+        deleteCurrentPackages: tl.getBoolInput('deleteCurrentPackages', true),
         metadataUpdateType: pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
         updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
