@@ -239,9 +239,9 @@ function putMetadata(submissionResource: any): Q.Promise<void>
 
     if (taskParams.deleteCurrentPackages)
     {
-        submissionResource.applicationPackages.forEach(package => 
+        submissionResource.applicationPackages.forEach(item => 
         {
-            package.fileStatus = 'PendingDelete';
+            item.fileStatus = 'PendingDelete';
         });
     }
 

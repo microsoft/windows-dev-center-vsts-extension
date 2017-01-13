@@ -182,9 +182,9 @@ function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 {
     if (taskParams.deleteCurrentPackages)
     {
-        flightSubmissionResource.flightPackages.forEach(package => 
+        flightSubmissionResource.flightPackages.forEach(item => 
         {
-            package.fileStatus = 'PendingDelete';
+            item.fileStatus = 'PendingDelete';
         });
     }
     api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource.flightPackages);
