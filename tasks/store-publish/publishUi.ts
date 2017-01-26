@@ -33,6 +33,7 @@ function gatherParams()
     }
 
     var taskParams: pub.PublishParams = {
+        appId : '',
         appName : '',
         authentication : credentials,
         endpoint : endpointUrl,
@@ -40,7 +41,8 @@ function gatherParams()
         metadataUpdateType: pub.MetadataUpdateType[<string>tl.getInput('metadataUpdateMethod', true)],
         updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
-        packages : []
+        packages : [],
+        skipPolling : tl.getBoolInput('skipPolling', true)
     };
 
     // Packages
@@ -96,6 +98,7 @@ function dumpParams(taskParams: pub.PublishParams): void
     tl.debug(`Update images: ${taskParams.updateImages}`);
     tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
+    tl.debug(`skipPolling: ${taskParams.skipPolling}`);
 }
 
 async function main()

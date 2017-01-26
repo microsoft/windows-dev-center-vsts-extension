@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "2",
-        "Patch": "0"
+        "Patch": "1"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
@@ -87,6 +87,14 @@
             "label": "Additional package(s)",
             "required": false,
             "helpMarkDown": "Paths to any additional packages required by this application (one path per line). Minimatch pattern is supported."
+        },
+        {
+            "name": "skipPolling",
+            "type": "boolean",
+            "label": "Skip polling submission till completion",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Skip polling submission after committing it to Dev Center. Typically, polling a submission adds at max 2-3 hours till the task completes."
         }
     ],
     "execution": {
