@@ -72,21 +72,28 @@ export class ResponseInformation
     // For friendly logging
     toString(): string
     {
+        var log: string;
+        
         if (this.error != undefined)
         {
-            return `Error ${JSON.stringify(this.error)}`;
+            log = `Error ${JSON.stringify(this.error)}`;
         }
         else
         {
-
             var bodyToPrint = this.body;
             if (typeof bodyToPrint != 'string')
             {
                 bodyToPrint = JSON.stringify(bodyToPrint);
             }
-
-            return `Status ${this.response.statusCode}: ${bodyToPrint}`;
+            log = `Status ${this.response.statusCode}: ${bodyToPrint}`;
         }
+        
+        var correlationid = this.response.headers['ms-correlationid'];
+        if (correlationid != undefined)
+        {
+            log = log + ` CorrelationId: ${correlationid}`;
+        }
+        return log;
     }
 }
 
