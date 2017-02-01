@@ -88,11 +88,15 @@ export class ResponseInformation
             log = `Status ${this.response.statusCode}: ${bodyToPrint}`;
         }
         
-        var correlationid = this.response.headers['ms-correlationid'];
-        if (correlationid != undefined)
+        if (this.response != undefined)
         {
-            log = log + ` CorrelationId: ${correlationid}`;
+            var correlationid = this.response.headers['ms-correlationid'];
+            if (correlationid != undefined)
+            {
+                log = log + ` CorrelationId: ${correlationid}`;
+            }
         }
+
         return log;
     }
 }
