@@ -115,7 +115,7 @@
             "label": "Skip polling",
             "defaultValue": false,
             "required": true,
-            "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission might run into. You will have to check status of your submission in Dev Center manually."
+            "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to check status of your submission in Dev Center manually."
         }
     ],
     "execution": {
