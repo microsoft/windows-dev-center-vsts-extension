@@ -126,7 +126,7 @@ export async function flightTask(params: FlightParams)
     if (taskParams.skipPolling)
     {
         console.log('Skip polling option is checked. Skipping polling...');
-        console.log('Please make sure submission completes successfully in Dev Center');
+        console.log('You can check status of the submission in Dev Center');
     }
     else
     {

@@ -79,7 +79,7 @@ This task allows you to publish your app on the Store by creating a submission o
 
 * Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Each individual path supports Minimatch pattern.
 
-* Skip polling (Checkbox) - If checked, will skip polling the submission after committing it to Dev Center. Otherwise, we will keep polling the submission till it gets published (which typically takes around 2 hours). **Warning**: If you check this box, you will not see errors, if any, that your submission may run into. You will have to check status of your submission in Dev Center manually.
+* Skip polling (Checkbox) - If checked, will skip polling the submission after committing it to Dev Center. Otherwise, it will keep polling the submission till it gets published (which typically takes around 2 hours). **Warning**: If you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check the status of your submission in Dev Center.
 
 You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
 
@@ -199,7 +199,7 @@ This task allows you to publish your app to specified flight on the Store by cre
 
 * Additional package(s) (*Text, optional*) - A list of paths, one per line, of additional packages that your app needs, for example to support multiple platforms. Each individual path supports Minimatch pattern.
 
-* Skip polling (Checkbox) - If checked, will skip polling the submission after committing it to Dev Center. Otherwise, we will keep polling the submission till it gets published (which typically takes around 2 hours). **Warning**: If you check this box, you will not see errors, if any, that your submission may run into. You will have to check status of your submission in Dev Center manually.
+* Skip polling (Checkbox) - If checked, will skip polling the submission after committing it to Dev Center. Otherwise, it will keep polling the submission till it gets published (which typically takes around 2 hours). **Warning**: If you check this box, you will not see errors, if any, that your submission may run into. You will have to check status of your submission in Dev Center manually.
 
 You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
 You have to specify at least one package.
