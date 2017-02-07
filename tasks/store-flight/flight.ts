@@ -34,6 +34,9 @@ export interface CoreFlightParams
 
     /** A path where the zip file to be uploaded to the dev center will be stored. */
     zipFilePath: string;
+
+    /** If true, we will exit immediately after commit without polling submission till app is published. */
+    skipPolling: boolean;
 }
 
 export interface AppIdParam
@@ -120,10 +123,17 @@ export async function flightTask(params: FlightParams)
     console.log('Committing flight submission...');
     await commitFlightSubmission(flightSubmissionResource.id);
 
-    console.log('Polling flight submission...');
-    var resourceLocation = `applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
-    await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
-
+    if (taskParams.skipPolling)
+    {
+        console.log('Skip polling option is checked. Skipping polling...');
+        console.log('You can check status of the submission in Dev Center');
+    }
+    else
+    {
+        console.log('Polling flight submission...');
+        var resourceLocation = `applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
+        await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
+    }
     tl.setResult(tl.TaskResult.Succeeded, 'Flight submission completed');
 }
 
