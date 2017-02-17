@@ -2,6 +2,7 @@
  * Entry point for the Flight task. Gathers parameters and performs validation.
  */
 
+import api = require('../common/apiHelper');
 import inputHelper = require('../common/inputHelper');
 import request = require('../common/requestHelper');
 import fli = require('./flight');
@@ -41,7 +42,9 @@ function gatherParams()
         force: tl.getBoolInput('force', true),
         zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages: [],
-        skipPolling: tl.getBoolInput('skipPolling', true)
+        skipPolling: tl.getBoolInput('skipPolling', true),
+        deletePackages: tl.getBoolInput('deletePackages', true),
+        numberOfPackagesToKeep: api.MAX_PACKAGES_PER_GROUP
     };
 
     // Packages
@@ -62,6 +65,11 @@ function gatherParams()
     if (taskParams.packages.length == 0)
     {
         throw new Error(`At least one package must be provided`);
+    }
+    
+    if (taskParams.deletePackages)
+    {
+        taskParams.numberOfPackagesToKeep = parseInt(tl.getInput('numberOfPackagesToKeep', true));
     }
 
     // App identification
@@ -99,6 +107,8 @@ function dumpParams(taskParams: fli.FlightParams): void
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
     tl.debug(`Local ZIP file path: ${taskParams.zipFilePath}`);
     tl.debug(`skipPolling: ${taskParams.skipPolling}`);
+    tl.debug(`deletePackages: ${taskParams.deletePackages}`);
+    tl.debug(`numberOfPackagesToKeep: ${taskParams.numberOfPackagesToKeep}`);
 }
 
 async function main()

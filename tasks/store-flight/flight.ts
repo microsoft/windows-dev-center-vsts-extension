@@ -37,6 +37,12 @@ export interface CoreFlightParams
 
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
+
+    /** If true, we will delete some or all of the old packages from the flight group we are submitting to. */
+    deletePackages: boolean;
+
+    /** Specifies number of packages per unique target device family and target platform to keep in the flight group. */
+    numberOfPackagesToKeep: number;
 }
 
 export interface AppIdParam
@@ -109,6 +115,12 @@ export async function flightTask(params: FlightParams)
 
     console.log('Creating flight submission...');
     var flightSubmissionResource = await createFlightSubmission();
+
+    if (taskParams.deletePackages)
+    {
+        console.log('Deleting old packages...');
+        api.deleteOldPackages(flightSubmissionResource.flightPackages, taskParams.numberOfPackagesToKeep);
+    }
 
     console.log('Updating flight submission...');
     await putFlightSubmission(flightSubmissionResource);
