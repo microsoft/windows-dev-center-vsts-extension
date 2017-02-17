@@ -134,7 +134,7 @@ export function performRequest<T>(
             typeof body == 'string') // body might be an object if the options given to request already parsed it for us
         {
             body = JSON.parse(body);
-            logErrorsAndWarnings(body);
+            logErrorsAndWarnings(response, body);
         }
 
         if (error || (response && response.statusCode >= 400))
@@ -288,21 +288,36 @@ export function is400Error(err): boolean
 
 /**
  * Examines a response body and logs errors and warnings.
+ * @param response Response returned by the Store API
  * @param body A body in the format given by the Store API
- * (Where body.errors and body.warnings are arrays of objects
- * containing a 'code' and 'details' attribute).
+ * (Where body.statusDetails.errors and body.statusDetails.warnings 
+ * are arrays of objects containing 'code' and 'details' attributes).
  */
-function logErrorsAndWarnings(body: any)
+function logErrorsAndWarnings(response: any, body: any)
 {
-    if (body.errors != undefined && body.errors.length > 0)
+    var shouldLogCorrelationId : boolean = false;
+    
+    if (body.statusDetails != undefined)
     {
-        console.error('Errors occurred in request');
-        (<any[]>body.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
-    }
+        if (body.statusDetails.errors != undefined && body.statusDetails.errors.length > 0)
+        {
+            shouldLogCorrelationId = true;
+            console.error('Errors occurred in request');
+            (<any[]>body.statusDetails.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
+        }
 
-    if (body.warnings != undefined && body.warnings.length > 0)
-    {
-        console.warn('Warnings occurred in request');
-        (<any[]>body.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+        if (body.statusDetails.warnings != undefined && body.statusDetails.warnings.length > 0)
+        {
+            shouldLogCorrelationId = true;
+            console.warn('Warnings occurred in request');
+            (<any[]>body.statusDetails.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+        }
+
+        if (shouldLogCorrelationId && 
+            response != undefined && 
+            response.headers['ms-correlationid'] != undefined)
+        {
+            console.log(`CorrelationId: ${response.headers['ms-correlationid']}`);
+        }
     }
 }
