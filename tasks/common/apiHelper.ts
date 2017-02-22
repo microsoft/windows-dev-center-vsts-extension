@@ -50,7 +50,7 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
     submissionPackages.forEach(submissionPackage => 
     {
         if (submissionPackage.hasOwnProperty('targetDeviceFamilies') && 
-            submissionPackage.targetDeviceFamilies !== undefined && 
+            Array.isArray(submissionPackage.targetDeviceFamilies) && 
             submissionPackage.targetDeviceFamilies.length > 0)
         {
             submissionPackage.targetDeviceFamilies.forEach(targetDeviceFamily =>

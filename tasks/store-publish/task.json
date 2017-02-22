@@ -137,12 +137,13 @@
                 "2": "2",
                 "3": "3",
                 "4": "4",
-                "5": "5",
-                "25": "All"
+                "5": "5"
+            },
+            "properties": {
+                "EditableOptions": "True"
             },
             "visibleRule": "deletePackages = true"
         }
-
     ],
     "execution": {
         "Node": {
