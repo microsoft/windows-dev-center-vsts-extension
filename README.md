@@ -201,6 +201,11 @@ This task allows you to publish your app to specified flight on the Store by cre
 
 * Skip polling (Checkbox) - If checked, will skip polling the submission after committing it to Dev Center. Otherwise, it will keep polling the submission till it gets published (which typically takes around 2 hours). **Warning**: If you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check the status of your submission in Dev Center.
 
+* Delete Packages (Checkbox) - If checked, will enable deletion of one or more old (package with lower version) packages. Checking this box will enable a dropdown "Number of packages to keep" explained in following point. If not checked, will not delete any old package.
+
+* Number of Packages to keep - Specify number of latest (decided on the basis of package version) packages to be kept per unique target device family and target platform. For e.g. if you have a mix of 3 distinct packages each for Windows 10 desktop, mobile and Windows 8.1 X64 platform (so in total 9 packages), and you specify 2
+in this box, then the oldest package in each group will be deleted (total packages after deletion will be 6).
+
 You only have to select the packages you want to update. If you have a package that will not be updated as part of your release, you do not have to specify it.
 You have to specify at least one package.
 
