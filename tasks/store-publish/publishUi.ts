@@ -2,6 +2,7 @@
  * Entry point for the Publish task. Gathers parameters and performs validation.
  */
 
+import api = require('../common/apiHelper');
 import inputHelper = require('../common/inputHelper');
 import request = require('../common/requestHelper');
 import pub = require('./publish');
@@ -42,7 +43,9 @@ function gatherParams()
         updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : [],
-        skipPolling : tl.getBoolInput('skipPolling', true)
+        skipPolling : tl.getBoolInput('skipPolling', true),
+        deletePackages: tl.getBoolInput('deletePackages', true),
+        numberOfPackagesToKeep: api.MAX_PACKAGES_PER_GROUP
     };
 
     // Packages
@@ -59,6 +62,11 @@ function gatherParams()
     )
 
     taskParams.packages = packages.map(p => p.trim()).filter(p => p.length != 0);
+
+    if (taskParams.deletePackages)
+    {
+        taskParams.numberOfPackagesToKeep = parseInt(tl.getInput('numberOfPackagesToKeep', true));
+    }
 
     // App identification
     var nameType = tl.getInput('nameType', true);
@@ -99,6 +107,8 @@ function dumpParams(taskParams: pub.PublishParams): void
     tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
     tl.debug(`skipPolling: ${taskParams.skipPolling}`);
+    tl.debug(`deletePackages: ${taskParams.deletePackages}`);
+    tl.debug(`numberOfPackagesToKeep: ${taskParams.numberOfPackagesToKeep}`);
 }
 
 async function main()
