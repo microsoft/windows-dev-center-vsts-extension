@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "2",
-        "Patch": "1"
+        "Patch": "2"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
@@ -95,6 +95,33 @@
             "defaultValue": false,
             "required": true,
             "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check the status of your submission in Dev Center."
+        },
+        {
+            "name": "deletePackages",
+            "type": "boolean",
+            "label": "Delete Packages",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Delete old unnecessary packages from the flight group you are submitting to."
+        },
+        {
+            "name": "numberOfPackagesToKeep",
+            "type": "pickList",
+            "label": "Number of Packages to keep",
+            "required": true,
+            "helpMarkDown": "Number of packages to keep per unique Target Device Family and Target Platform.",
+            "options": {
+                "0": "None",
+                "1": "1",
+                "2": "2",
+                "3": "3",
+                "4": "4",
+                "5": "5"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "deletePackages = true"
         }
     ],
     "execution": {

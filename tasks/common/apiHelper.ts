@@ -29,11 +29,80 @@ export var ROOT: string;
 /** How many times should we retry. */
 export const NUM_RETRIES = 5;
 
+/** Maximum number of packages allowed in one flight group */
+export const MAX_PACKAGES_PER_GROUP = 25;
+
 /**
  * The message used when a commit fails. Note that this does not need to be very
  * informative since the user will see more details in additional messages.
  */
 const COMMIT_FAILED_MSG = 'Commit failed';
+
+export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKeep: number): void
+{
+    if (numberOfPackagesToKeep === undefined) {
+        return;
+    }
+    
+    var dict = {};
+    // For each of the target device family in the submission resource
+    // get all the different versions available
+    submissionPackages.forEach(submissionPackage => 
+    {
+        if (submissionPackage.hasOwnProperty('targetDeviceFamilies') && 
+            Array.isArray(submissionPackage.targetDeviceFamilies) && 
+            submissionPackage.targetDeviceFamilies.length > 0)
+        {
+            submissionPackage.targetDeviceFamilies.forEach(targetDeviceFamily =>
+            {
+                if (dict[targetDeviceFamily] === undefined)
+                {
+                    dict[targetDeviceFamily] = [];
+                }
+                dict[targetDeviceFamily].push(submissionPackage.version);
+            });
+        }
+        else
+        {
+            var key = submissionPackage.targetPlatform + "_" + submissionPackage.architecture;
+            if (dict[key] === undefined)
+            {
+                dict[key] = [];
+            }
+            dict[key].push(submissionPackage.version);
+        }
+    });
+    
+    var versionsToKeep = new Set();
+    for (var entry in dict) 
+    {
+        if (dict.hasOwnProperty(entry)) 
+        {
+            // Sort in descending order of versions and only keep number of packages that we need
+            dict[entry].sort(function (a, b) { return (a > b) ? -1 : (a < b) ? 1 : 0; });
+            dict[entry].slice(0, numberOfPackagesToKeep).forEach(bundle => versionsToKeep.add(bundle));
+        }
+    }
+    
+    if (versionsToKeep.size > 0)
+    {
+        tl.debug("Keeping packages with following versions:");
+        versionsToKeep.forEach(version =>
+        {
+            tl.debug(`${version}`);
+        });
+    }
+    
+    // Mark all the packages for deletion which are not present in the set of versions we calculated
+    submissionPackages.forEach(submissionPackage =>
+    {
+        if (!versionsToKeep.has(submissionPackage.version))
+        {
+            tl.debug(`Removing ${submissionPackage.version}`);
+            submissionPackage.fileStatus = 'PendingDelete';
+        }
+    });
+}
 
 /**
  * Tries to obtain an app resource from the primary name of an app.

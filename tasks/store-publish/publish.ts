@@ -70,6 +70,12 @@ export interface CorePublishParams
 
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
+
+    /** If true, we will delete some or all of the old packages from the Production group. */
+    deletePackages: boolean;
+
+    /** Specifies number of packages per unique target device family and target platform to keep in the Production group. */
+    numberOfPackagesToKeep: number;
 }
 
 export interface AppIdParam
@@ -143,6 +149,12 @@ export async function publishTask(params: PublishParams)
 
     console.log('Creating submission...');
     var submissionResource = await createAppSubmission();
+
+    if (taskParams.deletePackages)
+    {
+        console.log('Deleting old packages...');
+        api.deleteOldPackages(submissionResource.applicationPackages, taskParams.numberOfPackagesToKeep);
+    }
 
     console.log('Updating submission...');
     await putMetadata(submissionResource);
