@@ -10,6 +10,7 @@ import http = require('http'); // Only used for types
 import uuid = require('node-uuid');
 import Q = require('q');
 import request = require('request');
+import tl = require('vsts-task-lib');
 var streamifier = require('streamifier'); // streamifier has no typings
 
 /** How long to wait between retries (in ms) */
@@ -295,29 +296,24 @@ export function is400Error(err): boolean
  */
 function logErrorsAndWarnings(response: any, body: any)
 {
-    var shouldLogCorrelationId : boolean = false;
+    if (body === undefined || body.statusDetails === undefined)
+        return;
     
-    if (body.statusDetails != undefined)
+    if (body.statusDetails.errors != undefined && body.statusDetails.errors.length > 0)
     {
-        if (body.statusDetails.errors != undefined && body.statusDetails.errors.length > 0)
-        {
-            shouldLogCorrelationId = true;
-            console.error('Errors occurred in request');
-            (<any[]>body.statusDetails.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
-        }
+        console.error('Errors occurred in request');
+        (<any[]>body.statusDetails.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
+    }
 
-        if (body.statusDetails.warnings != undefined && body.statusDetails.warnings.length > 0)
-        {
-            shouldLogCorrelationId = true;
-            console.warn('Warnings occurred in request');
-            (<any[]>body.statusDetails.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
-        }
+    if (body.statusDetails.warnings != undefined && body.statusDetails.warnings.length > 0)
+    {
+        console.warn('Warnings occurred in request');
+        (<any[]>body.statusDetails.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+    }
 
-        if (shouldLogCorrelationId && 
-            response != undefined && 
-            response.headers['ms-correlationid'] != undefined)
-        {
-            console.log(`CorrelationId: ${response.headers['ms-correlationid']}`);
-        }
+    if (response != undefined && 
+        response.headers['ms-correlationid'] != undefined)
+    {
+        tl.debug(`CorrelationId: ${response.headers['ms-correlationid']}`);
     }
 }
