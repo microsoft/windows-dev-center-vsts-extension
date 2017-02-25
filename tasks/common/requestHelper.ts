@@ -299,13 +299,13 @@ function logErrorsAndWarnings(response: any, body: any)
     if (body === undefined || body.statusDetails === undefined)
         return;
     
-    if (body.statusDetails.errors != undefined && body.statusDetails.errors.length > 0)
+    if (Array.isArray(body.statusDetails.errors) && body.statusDetails.errors.length > 0)
     {
         console.error('Errors occurred in request');
         (<any[]>body.statusDetails.errors).forEach(x => console.error(`\t[${x.code}]  ${x.details}`));
     }
 
-    if (body.statusDetails.warnings != undefined && body.statusDetails.warnings.length > 0)
+    if (Array.isArray(body.statusDetails.warnings) && body.statusDetails.warnings.length > 0)
     {
         console.warn('Warnings occurred in request');
         (<any[]>body.statusDetails.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
