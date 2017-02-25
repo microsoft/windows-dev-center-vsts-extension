@@ -307,8 +307,8 @@ function logErrorsAndWarnings(response: any, body: any)
 
     if (Array.isArray(body.statusDetails.warnings) && body.statusDetails.warnings.length > 0)
     {
-        console.warn('Warnings occurred in request');
-        (<any[]>body.statusDetails.warnings).forEach(x => console.warn(`\t[${x.code}]  ${x.details}`));
+        tl.debug('Warnings occurred in request');
+        (<any[]>body.statusDetails.warnings).forEach(x => tl.debug(`\t[${x.code}]  ${x.details}`));
     }
 
     if (response != undefined && 
