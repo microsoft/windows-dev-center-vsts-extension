@@ -79,7 +79,7 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
         if (dict.hasOwnProperty(entry)) 
         {
             // Sort in descending order of versions and only keep number of packages that we need
-            dict[entry].sort(function (a, b) { return (a > b) ? -1 : (a < b) ? 1 : 0; });
+            dict[entry].sort().reverse();
             dict[entry].slice(0, numberOfPackagesToKeep).forEach(bundle => versionsToKeep.add(bundle));
         }
     }
