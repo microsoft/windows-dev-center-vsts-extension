@@ -43,14 +43,14 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
     if (numberOfPackagesToKeep === undefined) {
         return;
     }
-    
+
     var dict = {};
     // For each of the target device family in the submission resource
     // get all the different versions available
-    submissionPackages.forEach(submissionPackage => 
+    submissionPackages.forEach(submissionPackage =>
     {
-        if (submissionPackage.hasOwnProperty('targetDeviceFamilies') && 
-            Array.isArray(submissionPackage.targetDeviceFamilies) && 
+        if (submissionPackage.hasOwnProperty('targetDeviceFamilies') &&
+            Array.isArray(submissionPackage.targetDeviceFamilies) &&
             submissionPackage.targetDeviceFamilies.length > 0)
         {
             submissionPackage.targetDeviceFamilies.forEach(targetDeviceFamily =>
@@ -72,18 +72,18 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
             dict[key].push(submissionPackage.version);
         }
     });
-    
+
     var versionsToKeep = new Set();
-    for (var entry in dict) 
+    for (var entry in dict)
     {
-        if (dict.hasOwnProperty(entry)) 
+        if (dict.hasOwnProperty(entry))
         {
             // Sort in descending order of versions and only keep number of packages that we need
             dict[entry].sort().reverse();
             dict[entry].slice(0, numberOfPackagesToKeep).forEach(bundle => versionsToKeep.add(bundle));
         }
     }
-    
+
     if (versionsToKeep.size > 0)
     {
         tl.debug("Keeping packages with following versions:");
@@ -92,7 +92,7 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
             tl.debug(`${version}`);
         });
     }
-    
+
     // Mark all the packages for deletion which are not present in the set of versions we calculated
     submissionPackages.forEach(submissionPackage =>
     {
@@ -270,7 +270,8 @@ export function createSubmission(token: request.AccessToken, url: string): Q.Pro
         method: 'POST'
     };
 
-    return request.performAuthenticatedRequest<any>(token, requestParams);
+    var putGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
 }
 
 /**
@@ -287,8 +288,6 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
         json: true, // Sets content-type and length for us, and parses the request/response appropriately
         body: submissionResource
     };
-
-    tl.debug(`Performing update`);
 
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
     return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
