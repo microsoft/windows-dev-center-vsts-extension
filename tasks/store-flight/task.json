@@ -74,6 +74,14 @@
             "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
         },
         {
+            "name": "deleteCurrentPackages",
+            "type": "boolean",
+            "label": "Delete current packages",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Delete current packages(*.appx,*.appxupload) from submission"
+        },
+        {
             "name": "packagePath",
             "type": "filePath",
             "label": "Package file",

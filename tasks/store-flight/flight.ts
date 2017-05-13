@@ -29,6 +29,9 @@ export interface CoreFlightParams
      */
     force: boolean;
 
+    /** If true, delete any current packages from submission. Otherwise, leave current packages and add new packages. */
+    deleteCurrentPackages: boolean;
+
     /** A list of paths to the packages to be uploaded. */
     packages: string[];
 
@@ -199,6 +202,13 @@ function createFlightSubmission(): Q.Promise<any>
  */
 function putFlightSubmission(flightSubmissionResource: any): Q.Promise<void>
 {
+    if (taskParams.deleteCurrentPackages)
+    {
+        flightSubmissionResource.flightPackages.forEach(item => 
+        {
+            item.fileStatus = 'PendingDelete';
+        });
+    }
     api.includePackagesInSubmission(taskParams.packages, flightSubmissionResource.flightPackages);
 
     var url = `${api.ROOT}applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
