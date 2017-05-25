@@ -149,6 +149,8 @@ export async function publishTask(params: PublishParams)
 
     console.log('Creating submission...');
     var submissionResource = await createAppSubmission();
+    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${submissionResource.id}/`;
+    console.log(`Submission ${submissionUrl} was created successfully`);
 
     if (taskParams.deletePackages)
     {
@@ -176,7 +178,7 @@ export async function publishTask(params: PublishParams)
     if (taskParams.skipPolling)
     {
         console.log('Skip polling option is checked. Skipping polling...');
-        console.log('You can check status of the submission in Dev Center');
+        console.log(`Click here ${submissionUrl} to check the status of the submission in Dev Center`);
     }
     else
     {
@@ -184,6 +186,10 @@ export async function publishTask(params: PublishParams)
         var resourceLocation = `applications/${appId}/submissions/${submissionResource.id}`;
         await api.pollSubmissionStatus(currentToken, resourceLocation, submissionResource.targetPublishMode);
     }
+
+    // Attach summary file for easy access to submission on Dev Center from release Summary tab
+    api.attachSubmissionSummary(appResource.primaryName, submissionUrl, submissionResource);
+
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
 
@@ -203,13 +209,7 @@ async function getAppResource()
         appId = await api.getAppIdByName(currentToken, taskParams.appName);
     }
 
-    tl.debug(`Getting app resource from ID ${appId}`);
-    var requestParams = {
-        url: api.ROOT + 'applications/' + appId,
-        method: 'GET'
-    };
-
-    return request.performAuthenticatedRequest<any>(currentToken, requestParams);
+    return api.getAppResource(currentToken, appId);
 }
 
 
@@ -221,7 +221,7 @@ function deleteAppSubmission(submissionLocation: string): Q.Promise<void>
     return api.deleteSubmission(currentToken, api.ROOT + submissionLocation);
 }
 
-/** 
+/**
  * Creates a submission for a given app.
  * @return Promises the new submission resource.
  */
