@@ -245,6 +245,20 @@ function checkSubmissionStatus(token: request.AccessToken, resourceLocation: str
 }
 
 /**
+ * @return Promises the resource associated with the application given to the task.
+ */
+export function getAppResource(token: request.AccessToken, appId: string): Q.Promise<any>
+{
+    tl.debug(`Getting app resource from ID ${appId}`);
+    var requestParams = {
+        url: ROOT + 'applications/' + appId,
+        method: 'GET'
+    };
+
+    return request.performAuthenticatedRequest<any>(token, requestParams);
+}
+
+/**
  * @return Promises the deletion of a resource
  */
 export function deleteSubmission(token: request.AccessToken, url: string): Q.Promise<void>
@@ -413,3 +427,19 @@ function makePackageEntry(pack: string, i: number): string
     return i.toString() + "_" + path.basename(pack);
 }
 
+/**
+ * Creates submission summary text in MD format
+ */
+export function buildSummaryText(appName: string, submissionName: string, submissionUrl: string, submissionStatus: string) {
+    var summaryText = `**${appName}** submission [${submissionName}](${submissionUrl}) status is ${submissionStatus}.`;
+    return summaryText;
+}
+
+/**
+ * Adds attachment to Summary tab on VSRM release details
+ */
+export function attachSubmissionSummary(summaryText: string) {
+    var summaryFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), 'DevCenter.md');
+    fs.writeFileSync(summaryFile, summaryText);
+    console.log("##vso[task.addattachment type=Distributedtask.Core.Summary;name=DevCenter;]" + summaryFile);
+}

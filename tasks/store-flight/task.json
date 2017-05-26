@@ -1,5 +1,5 @@
 ﻿{
-    "id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc ",
+    "id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc",
     "name": "store-flight",
     "friendlyName": "Windows Store - Flight",
     "description": "Make a flight submission to the Windows Store",
@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "2",
-        "Patch": "4"
+        "Patch": "6"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Flight $(packagePath) to $(flightName)",

@@ -19,7 +19,7 @@ export interface CoreFlightParams
 
     /**  Name of the flight we are publishing packages to */
     flightName: string;
-    
+
     /** The credentials used to authenticate to the store. */
     authentication: request.Credentials;
 
@@ -91,19 +91,14 @@ export async function flightTask(params: FlightParams)
     console.log('Authenticating...');
     currentToken = await request.authenticate(taskParams.endpoint, taskParams.authentication);
 
-    if (hasAppId(taskParams))
-    {
-        appId = taskParams.appId;
-    }
-    else
-    {
-        console.log(`Obtaining app ID for name ${taskParams.appName}...`);
-        appId = await api.getAppIdByName(currentToken, taskParams.appName);
-    }
+    console.log('Obtaining app information...');
+    var appResource = await getAppResource();
+
+    appId = appResource.id; // Globally set app ID for future steps.
 
     console.log(`Obtaining flight resource for flight ${taskParams.flightName} in app ${appId}`);
     var flightResource = await getFlightResource(taskParams.flightName);
-    
+
     flightId = flightResource.flightId; // Globally set app ID for future steps.
 
     // Delete pending submission if force is turned on (only one pending submission can exist)
@@ -115,6 +110,8 @@ export async function flightTask(params: FlightParams)
 
     console.log('Creating flight submission...');
     var flightSubmissionResource = await createFlightSubmission();
+    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${flightSubmissionResource.id}`;
+    console.log(`Submission ${submissionUrl} was created successfully`);
 
     if (taskParams.deletePackages)
     {
@@ -138,7 +135,7 @@ export async function flightTask(params: FlightParams)
     if (taskParams.skipPolling)
     {
         console.log('Skip polling option is checked. Skipping polling...');
-        console.log('You can check status of the submission in Dev Center');
+        console.log(`Click here ${submissionUrl} to check the status of the submission in Dev Center`);
     }
     else
     {
@@ -146,7 +143,31 @@ export async function flightTask(params: FlightParams)
         var resourceLocation = `applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
         await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
     }
+
+    // Attach summary file for easy access to submission on Dev Center from release Summary tab
+    var summaryText = api.buildSummaryText(appResource.primaryName, flightResource.friendlyName, submissionUrl, taskParams.skipPolling ? 'publishing' : 'in the store');
+    api.attachSubmissionSummary(summaryText);
+
     tl.setResult(tl.TaskResult.Succeeded, 'Flight submission completed');
+}
+
+/**
+ * @return Promises the resource associated with the application given to the task.
+ */
+async function getAppResource()
+{
+    var appId;
+    if (hasAppId(taskParams))
+    {
+        appId = taskParams.appId;
+    }
+    else
+    {
+        tl.debug(`Getting app ID from name ${taskParams.appName}`);
+        appId = await api.getAppIdByName(currentToken, taskParams.appName);
+    }
+
+    return api.getAppResource(currentToken, appId);
 }
 
 function getFlightResource(flightName: string, currentPage?: string): Q.Promise<any>
