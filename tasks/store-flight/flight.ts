@@ -110,7 +110,7 @@ export async function flightTask(params: FlightParams)
 
     console.log('Creating flight submission...');
     var flightSubmissionResource = await createFlightSubmission();
-    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/Application/GetFlight?appId=${appId}&submissionId=${flightSubmissionResource.id}`;
+    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${flightSubmissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
     if (taskParams.deletePackages)

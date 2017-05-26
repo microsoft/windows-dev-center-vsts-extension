@@ -431,11 +431,8 @@ function makePackageEntry(pack: string, i: number): string
  * Adds attachment to Summary tab on VSRM release details
  */
 export function attachSubmissionSummary(appName: string, submissionUrl: string, submissionResource: any, flightName?: string) {
-    var submissionName = submissionResource.friendlyName || submissionResource.id;
+    var submissionName = flightName || submissionResource.friendlyName;
     var summaryText = `Submission [${submissionName}](${submissionUrl}) for ${appName} was created successfully.`;
-    if (flightName) {
-        summaryText += `\nFlight: ${flightName}`;
-    }
     var summaryFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), 'DevCenter.md');
     fs.writeFileSync(summaryFile, summaryText);
     console.log("##vso[task.addattachment type=Distributedtask.Core.Summary;name=DevCenter;]" + summaryFile);
