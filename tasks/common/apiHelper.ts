@@ -428,11 +428,17 @@ function makePackageEntry(pack: string, i: number): string
 }
 
 /**
+ * Creates submission summary text in MD format
+ */
+export function buildSummaryText(appName: string, submissionName: string, submissionUrl: string, submissionStatus: string) {
+    var summaryText = `**${appName}** submission [${submissionName}](${submissionUrl}) status is ${submissionStatus}.`;
+    return summaryText;
+}
+
+/**
  * Adds attachment to Summary tab on VSRM release details
  */
-export function attachSubmissionSummary(appName: string, submissionUrl: string, submissionResource: any, flightName?: string) {
-    var submissionName = flightName || submissionResource.friendlyName;
-    var summaryText = `Submission [${submissionName}](${submissionUrl}) for ${appName} was created successfully.`;
+export function attachSubmissionSummary(summaryText: string) {
     var summaryFile = path.join(tl.getVariable('System.DefaultWorkingDirectory'), 'DevCenter.md');
     fs.writeFileSync(summaryFile, summaryText);
     console.log("##vso[task.addattachment type=Distributedtask.Core.Summary;name=DevCenter;]" + summaryFile);

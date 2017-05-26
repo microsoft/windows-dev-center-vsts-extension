@@ -145,7 +145,8 @@ export async function flightTask(params: FlightParams)
     }
 
     // Attach summary file for easy access to submission on Dev Center from release Summary tab
-    api.attachSubmissionSummary(appResource.primaryName, submissionUrl, flightSubmissionResource, flightResource.friendlyName);
+    var summaryText = api.buildSummaryText(appResource.primaryName, flightResource.friendlyName, submissionUrl, taskParams.skipPolling ? 'publishing' : 'in the store');
+    api.attachSubmissionSummary(summaryText);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Flight submission completed');
 }

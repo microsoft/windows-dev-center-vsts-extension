@@ -149,7 +149,7 @@ export async function publishTask(params: PublishParams)
 
     console.log('Creating submission...');
     var submissionResource = await createAppSubmission();
-    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${submissionResource.id}/`;
+    var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${submissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
     if (taskParams.deletePackages)
@@ -188,7 +188,8 @@ export async function publishTask(params: PublishParams)
     }
 
     // Attach summary file for easy access to submission on Dev Center from release Summary tab
-    api.attachSubmissionSummary(appResource.primaryName, submissionUrl, submissionResource);
+    var summaryText = api.buildSummaryText(appResource.primaryName, submissionResource.friendlyName, submissionUrl, taskParams.skipPolling ? 'publishing' : 'in the store');
+    api.attachSubmissionSummary(summaryText);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Submission completed');
 }
