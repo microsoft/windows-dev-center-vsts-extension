@@ -71,11 +71,11 @@ export interface CorePublishParams
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
 
-    /** If true, we will delete some or all of the old packages from the Production group. */
-    deletePackages: boolean;
+    /** If provided, specifies number of packages per unique target device family and target platform to keep in the Production group. */
+    numberOfPackagesToKeep?: number;
 
-    /** Specifies number of packages per unique target device family and target platform to keep in the Production group. */
-    numberOfPackagesToKeep: number;
+    /** If provided, specified the number of hours to differ until the packages in this submission become mandatory. */
+    mandatoryUpdateDifferHours?: number;
 }
 
 export interface AppIdParam
@@ -152,11 +152,14 @@ export async function publishTask(params: PublishParams)
     var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${submissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
-    if (taskParams.deletePackages)
+    if (taskParams.numberOfPackagesToKeep)
     {
         console.log('Deleting old packages...');
         api.deleteOldPackages(submissionResource.applicationPackages, taskParams.numberOfPackagesToKeep);
     }
+
+    console.log('Updating package delivery options...');
+    await api.updatePackageDeliveryOptions(submissionResource, taskParams.mandatoryUpdateDifferHours);
 
     console.log('Updating submission...');
     await putMetadata(submissionResource);

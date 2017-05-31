@@ -38,11 +38,11 @@ export interface CoreFlightParams
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
 
-    /** If true, we will delete some or all of the old packages from the flight group we are submitting to. */
-    deletePackages: boolean;
+    /**If provided, specifies number of packages per unique target device family and target platform to keep in the flight group. */
+    numberOfPackagesToKeep?: number;
 
-    /** Specifies number of packages per unique target device family and target platform to keep in the flight group. */
-    numberOfPackagesToKeep: number;
+    /** If provided, specified the number of hours to differ until the packages in this submission become mandatory. */
+    mandatoryUpdateDifferHours?: number;
 }
 
 export interface AppIdParam
@@ -113,11 +113,14 @@ export async function flightTask(params: FlightParams)
     var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${flightSubmissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
-    if (taskParams.deletePackages)
+    if (taskParams.numberOfPackagesToKeep)
     {
         console.log('Deleting old packages...');
         api.deleteOldPackages(flightSubmissionResource.flightPackages, taskParams.numberOfPackagesToKeep);
     }
+
+    console.log('Updating package delivery options...');
+    await api.updatePackageDeliveryOptions( flightSubmissionResource, taskParams.mandatoryUpdateDifferHours);
 
     console.log('Updating flight submission...');
     await putFlightSubmission(flightSubmissionResource);

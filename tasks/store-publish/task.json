@@ -15,10 +15,17 @@
     "version": {
         "Major": "0",
         "Minor": "10",
-        "Patch": "7"
+        "Patch": "8"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Publish $(packagePath)",
+    "groups": [
+        {
+            "name": "advanced",
+            "displayName": "Advanced Options",
+            "isExpanded": false
+        }
+    ],
     "inputs": [
         {
             "name": "serviceEndpoint",
@@ -122,14 +129,17 @@
             "type": "boolean",
             "label": "Delete Packages",
             "defaultValue": false,
-            "required": true,
+            "groupName": "advanced",
+            "required": false,
             "helpMarkDown": "Delete old unnecessary packages from the production group."
         },
         {
             "name": "numberOfPackagesToKeep",
             "type": "pickList",
             "label": "Number of Packages to keep",
-            "required": true,
+            "defaultValue": "25",
+            "groupName": "advanced",
+            "required": false,
             "helpMarkDown": "Number of packages to keep per unique Target Device Family and Target Platform.",
             "options": {
                 "0": "None",
@@ -143,6 +153,35 @@
                 "EditableOptions": "True"
             },
             "visibleRule": "deletePackages = true"
+        },
+        {
+            "name": "isMandatoryUpdate",
+            "type": "boolean",
+            "label": "Mandatory Update",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Indicates whether you want to treat the packages in this submission as mandatory for self-installing app updates."
+        },
+        {
+            "name": "mandatoryUpdateDifferHours",
+            "type": "pickList",
+            "label": "The number of hours until packages become mandatory",
+            "defaultValue": "2",
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "The effective time when the packages in this submission become mandatory, in hours from submission time.",
+            "options": {
+                "2": "2",
+                "6": "6",
+                "12": "12",
+                "24": "24",
+                "48": "48"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "isMandatoryUpdate = true"
         }
     ],
     "execution": {

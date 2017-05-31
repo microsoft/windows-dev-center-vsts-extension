@@ -44,6 +44,10 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
         return;
     }
 
+    if (numberOfPackagesToKeep > MAX_PACKAGES_PER_GROUP) {
+        numberOfPackagesToKeep = MAX_PACKAGES_PER_GROUP;
+    }
+
     var dict = {};
     // For each of the target device family in the submission resource
     // get all the different versions available
@@ -321,6 +325,26 @@ export function commitSubmission(token: request.AccessToken, url: string): Q.Pro
     };
 
     return request.performAuthenticatedRequest<void>(token, requestParams);
+}
+
+/**
+ * Updates submission's package delivery options.
+ * @param submissionResource The current submission request
+ * @param mandatoryUpdateDifferHours The number of hours to differ until the packages in this submission become mandatory
+ * @returns A promise for the update of the submission on the server.
+ */
+export function updatePackageDeliveryOptions(submissionResource: any, mandatoryUpdateDifferHours?: number): void
+{
+    var mandatoryUpdateEffectiveDate: Date = new Date(0);
+    if (mandatoryUpdateDifferHours) {
+        mandatoryUpdateEffectiveDate.setTime(Date.now() + mandatoryUpdateDifferHours * 60 * 60 * 1000);
+        tl.debug(`Setting isMandatoryUpdate to true, mandatoryUpdateEffectiveDate to ${mandatoryUpdateEffectiveDate.toISOString()}`);
+    } else {
+        tl.debug(`Setting isMandatoryUpdate to false`);
+    }
+
+    submissionResource.packageDeliveryOptions.isMandatoryUpdate = mandatoryUpdateDifferHours !== null;
+    submissionResource.packageDeliveryOptions.mandatoryUpdateEffectiveDate = mandatoryUpdateEffectiveDate.toISOString();
 }
 
 /**
