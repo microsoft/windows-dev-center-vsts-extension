@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "2",
-        "Patch": "8"
+        "Patch": "9"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
@@ -73,14 +73,6 @@
             "helpMarkDown": "Name of the flight as seen on the Dev Center"
         },
         {
-            "name": "force",
-            "type": "boolean",
-            "label": "Delete pending submissions",
-            "defaultValue": false,
-            "required": true,
-            "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
-        },
-        {
             "name": "packagePath",
             "type": "filePath",
             "label": "Package file",
@@ -89,9 +81,18 @@
             "helpMarkDown": "Path to the application's package you want to flight. Minimatch pattern is supported."
         },
         {
+            "name": "force",
+            "type": "boolean",
+            "label": "Delete pending submissions",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
+        },
+        {
             "name": "additionalPackages",
             "type": "multiLine",
             "label": "Additional package(s)",
+            "groupName": "advanced",
             "required": false,
             "helpMarkDown": "Paths to any additional packages required by this application (one path per line). Minimatch pattern is supported."
         },
@@ -100,6 +101,7 @@
             "type": "boolean",
             "label": "Skip polling",
             "defaultValue": false,
+            "groupName": "advanced",
             "required": true,
             "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check the status of your submission in Dev Center."
         },
