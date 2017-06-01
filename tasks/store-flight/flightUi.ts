@@ -43,8 +43,8 @@ function gatherParams()
         zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages: [],
         skipPolling: tl.getBoolInput('skipPolling', true),
-        deletePackages: tl.getBoolInput('deletePackages', true),
-        numberOfPackagesToKeep: api.MAX_PACKAGES_PER_GROUP
+        numberOfPackagesToKeep: tl.getBoolInput('deletePackages') ? parseInt(tl.getInput('numberOfPackagesToKeep')) : null,
+        mandatoryUpdateDifferHours: tl.getBoolInput('isMandatoryUpdate') ? parseInt(tl.getInput('mandatoryUpdateDifferHours')) : null
     };
 
     // Packages
@@ -65,11 +65,6 @@ function gatherParams()
     if (taskParams.packages.length == 0)
     {
         throw new Error(`At least one package must be provided`);
-    }
-    
-    if (taskParams.deletePackages)
-    {
-        taskParams.numberOfPackagesToKeep = parseInt(tl.getInput('numberOfPackagesToKeep', true));
     }
 
     // App identification
@@ -107,8 +102,10 @@ function dumpParams(taskParams: fli.FlightParams): void
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
     tl.debug(`Local ZIP file path: ${taskParams.zipFilePath}`);
     tl.debug(`skipPolling: ${taskParams.skipPolling}`);
-    tl.debug(`deletePackages: ${taskParams.deletePackages}`);
+    tl.debug(`deletePackages: ${taskParams.numberOfPackagesToKeep ? true : false}`);
     tl.debug(`numberOfPackagesToKeep: ${taskParams.numberOfPackagesToKeep}`);
+    tl.debug(`isMandatoryUpdate: ${taskParams.mandatoryUpdateDifferHours ? true : false}`);
+    tl.debug(`mandatoryUpdateDifferHours: ${taskParams.mandatoryUpdateDifferHours}`);
 }
 
 async function main()
