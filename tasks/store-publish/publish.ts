@@ -15,6 +15,25 @@ import path = require('path');
 import Q = require('q');
 import tl = require('vsts-task-lib');
 
+/** Expected imageType values */
+const imageType: string[] = [
+    'Screenshot',
+    'PromotionalArtwork414X180',
+    'PromotionalArtwork846X468',
+    'PromotionalArtwork558X756',
+    'PromotionalArtwork414X468',
+    'PromotionalArtwork558X558',
+    'PromotionalArtwork2400X1200',
+    'Icon',
+    'WideIcon358X173',
+    'BackgroundImage1000X800',
+    'SquareIcon358X358',
+    'MobileScreenshot',
+    'XboxScreenshot',
+    'SurfaceHubScreenshot',
+    'HoloLensScreenshot'
+];
+
 /** How to update the app metadata */
 export enum MetadataUpdateType
 {
@@ -343,6 +362,10 @@ function updateListingImages(submissionResource: any, listing: string)
 {
     tl.debug(`Obtaining images for language ${listing}`);
 
+    // Map image directory names (case insensitive) to imageType enum (case sensitive)
+    var imageTypeMap = {};
+    imageType.forEach(i => imageTypeMap[i.toLowerCase()] = i);
+
     var listingPath = path.join(taskParams.metadataRoot, listing);
 
     var base = submissionResource.listings[listing].baseListing;
@@ -353,7 +376,7 @@ function updateListingImages(submissionResource: any, listing: string)
             base.images = [];
         }
         tl.debug(`Updating images from ${listingPath}`);
-        updateImageMetadata(base.images, path.join(listingPath, 'baseListing', 'images'));
+        updateImageMetadata(imageTypeMap, base.images, path.join(listingPath, 'baseListing', 'images'));
     }
 
     // Do the same for all the platform overrides
@@ -366,7 +389,7 @@ function updateListingImages(submissionResource: any, listing: string)
             platOverrideRef.images = [];
         }
         tl.debug(`Updating platform override images from ${platPath}`);
-        updateImageMetadata(platOverrideRef.images, platPath);
+        updateImageMetadata(imageTypeMap, platOverrideRef.images, platPath);
     }
 }
 
@@ -470,17 +493,18 @@ function getListingAttributes(listingWithPlatAbsPath: string): any
  * Update the given image information. All existing images in the array will be marked as
  * pending delete. Then, the given path will be scanned for images, which will themselves
  * be added to the array and marked as pending upload with the proper path.
+ * @param imageTypeMap
  * @param listing
  * @param path
  */
-function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
+function updateImageMetadata(imageTypeMap: any, imageArray: any[], imagesAbsPath: string): void
 {
     imageArray.forEach(img => img.fileStatus = 'PendingDelete');
 
     if (existsAndIsDir(imagesAbsPath))
     {
         var imageTypeDirs = fs.readdirSync(imagesAbsPath).filter(x =>
-            fs.statSync(path.join(imagesAbsPath, x)).isDirectory());
+            fs.statSync(path.join(imagesAbsPath, x)).isDirectory() && imageTypeMap[x.toLowerCase()]);
 
         // Check all subdirectories for image types.
         imageTypeDirs.forEach(imageTypeDir =>
@@ -494,7 +518,7 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
             imageFiles.forEach(img =>
             {
                 var imageName = path.parse(img).name;
-                var imageData = getImageAttributes(imageTypeAbs, imageName, currentFiles);
+                var imageData = getImageAttributes(imageTypeMap, imageTypeAbs, imageName, currentFiles);
                 if (imageData != undefined)
                 {
                     imageArray.push(imageData);
@@ -514,11 +538,12 @@ function updateImageMetadata(imageArray: any[], imagesAbsPath: string): void
  * In addition, the image will be marked as pending upload, and its image type will be given by the name
  * of the directory it's in.
  *
+ * @param imageTypeMap A hashmap for normalizing imageType direcory name
  * @param imagesAbsPath The absolute path to the current image directory.
  * @param imageName The filename of the image, without its extension.
  * @param currentFiles A list of files in the directory.
  */
-function getImageAttributes(imagesAbsPath: string, imageName: string, currentFiles: string[]): any
+function getImageAttributes(imageTypeMap: any, imagesAbsPath: string, imageName: string, currentFiles: string[]): any
 {
     var image: any = {};
     var imageAbsName = path.join(imagesAbsPath, imageName);
@@ -546,7 +571,7 @@ function getImageAttributes(imagesAbsPath: string, imageName: string, currentFil
     }
 
     // The type of image is the name of the directory in which we find the image.
-    image.imageType = path.basename(imagesAbsPath);
+    image.imageType = imageTypeMap[path.basename(imagesAbsPath).toLowerCase()];
     image.fileStatus = 'PendingUpload';
 
     // The filename we use is relative from the metadata root.
