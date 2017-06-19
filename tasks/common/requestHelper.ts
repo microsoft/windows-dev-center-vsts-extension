@@ -17,7 +17,7 @@ var streamifier = require('streamifier'); // streamifier has no typings
 const RETRY_DELAY = 5000;
 
 /** After how long should a connection be given up (in ms). */
-const TIMEOUT = 180000;
+const TIMEOUT = 600000;
 
 /** Block size of chunks uploaded to the blob (in bytes). */
 const UPLOAD_BLOCK_SIZE_BYTES = 1024 * 1024; // 1Mb
@@ -74,7 +74,7 @@ export class ResponseInformation
     toString(): string
     {
         var log: string;
-        
+
         if (this.error != undefined)
         {
             log = `Error ${JSON.stringify(this.error)}`;
@@ -88,7 +88,7 @@ export class ResponseInformation
             }
             log = `Status ${this.response.statusCode}: ${bodyToPrint}`;
         }
-        
+
         if (this.response != undefined &&
             this.response.headers['ms-correlationid'] != undefined)
         {
@@ -291,14 +291,14 @@ export function is400Error(err): boolean
  * Examines a response body and logs errors and warnings.
  * @param response Response returned by the Store API
  * @param body A body in the format given by the Store API
- * (Where body.statusDetails.errors and body.statusDetails.warnings 
+ * (Where body.statusDetails.errors and body.statusDetails.warnings
  * are arrays of objects containing 'code' and 'details' attributes).
  */
 function logErrorsAndWarnings(response: any, body: any)
 {
     if (body === undefined || body.statusDetails === undefined)
         return;
-    
+
     if (Array.isArray(body.statusDetails.errors) && body.statusDetails.errors.length > 0)
     {
         console.error('Errors occurred in request');
@@ -311,7 +311,7 @@ function logErrorsAndWarnings(response: any, body: any)
         (<any[]>body.statusDetails.warnings).forEach(x => tl.debug(`\t[${x.code}]  ${x.details}`));
     }
 
-    if (response != undefined && 
+    if (response != undefined &&
         response.headers['ms-correlationid'] != undefined)
     {
         tl.debug(`CorrelationId: ${response.headers['ms-correlationid']}`);
