@@ -15,7 +15,7 @@
     "version": {
         "Major": "0",
         "Minor": "10",
-        "Patch": "14"
+        "Patch": "15"
     },
     "minimumAgentVersion": "1.83.0",
     "instanceNameFormat": "Publish $(packagePath)",

@@ -188,7 +188,7 @@ export function createZipFromPackages(packages: string[])
  */
 export function pollSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<void>
 {
-    const POLL_DELAY = 10000;
+    const POLL_DELAY = 300000;  // Delay 5 minutes between poll requests
     var submissionCheckGenerator = () => checkSubmissionStatus(token, resourceLocation, publishMode);
     return request.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
         // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
