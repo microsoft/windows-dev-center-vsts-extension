@@ -86,7 +86,8 @@ export class ResponseInformation
             {
                 bodyToPrint = JSON.stringify(bodyToPrint);
             }
-            log = `Status ${this.response.statusCode}: ${bodyToPrint}`;
+            var statusCode: string = (this.response != undefined && this.response.statusCode != undefined) ? this.response.statusCode.toString() : 'unknown';
+            log = `Status ${statusCode}: ${bodyToPrint}`;
         }
 
         if (this.response != undefined &&
@@ -138,7 +139,7 @@ export function performRequest<T>(
             logErrorsAndWarnings(response, body);
         }
 
-        if (error || (response && response.statusCode >= 400))
+        if (error || (response && response.statusCode != undefined && response.statusCode >= 400))
         {
             deferred.reject(new ResponseInformation(error, response, body));
         }
