@@ -171,7 +171,7 @@ export async function publishTask(params: PublishParams)
     var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${submissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
-    if (taskParams.numberOfPackagesToKeep)
+    if (taskParams.numberOfPackagesToKeep != null)
     {
         console.log('Deleting old packages...');
         api.deleteOldPackages(submissionResource.applicationPackages, taskParams.numberOfPackagesToKeep);

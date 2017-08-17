@@ -113,7 +113,7 @@ export async function flightTask(params: FlightParams)
     var submissionUrl = `https://developer.microsoft.com/en-us/dashboard/apps/${appId}/submissions/${flightSubmissionResource.id}`;
     console.log(`Submission ${submissionUrl} was created successfully`);
 
-    if (taskParams.numberOfPackagesToKeep)
+    if (taskParams.numberOfPackagesToKeep != null)
     {
         console.log('Deleting old packages...');
         api.deleteOldPackages(flightSubmissionResource.flightPackages, taskParams.numberOfPackagesToKeep);
