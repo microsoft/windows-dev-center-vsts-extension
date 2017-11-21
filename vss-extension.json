@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.9.18",
+    "version": "0.9.19",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -58,8 +58,12 @@
             "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/LICENSE"
         },
         "support": {
-            "uri": "mailto:wdcrsppt@microsoft.com"
+            "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension/issues"
         }
+    },
+    "repository": {
+        "type": "git",
+        "uri": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
     },
     "contributions": [
         {
@@ -81,7 +85,7 @@
                             {
                                 "id": "url",
                                 "name": "Windows Store API URL",
-                                "description":  "Server URL",
+                                "description": "Server URL",
                                 "inputMode": "textbox",
                                 "isConfidential": false,
                                 "validation": {
