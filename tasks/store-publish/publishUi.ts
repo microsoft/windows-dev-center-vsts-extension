@@ -78,7 +78,7 @@ function gatherParams()
         throw new Error(`Invalid name type ${nameType}`);
     }
 
-    taskParams.metadataRoot = inputHelper.canonicalizePath(tl.getPathInput('metadataPath', false, true));
+    taskParams.metadataRoot = inputHelper.canonicalizePath(tl.getPathInput('metadataPath', false, taskParams.metadataUpdateType != pub.MetadataUpdateType.NoUpdate));
 
     return taskParams;
 }
