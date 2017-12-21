@@ -320,7 +320,7 @@ function putMetadata(submissionResource: any): Q.Promise<void>
 function updateMetadata(submissionResource: any): void
 {
     tl.debug(`Updating metadata of submission object from directory ${taskParams.metadataRoot}`);
-    var listings = fs.readdirSync(taskParams.metadataRoot);
+    var listings = fs.readdirSync(taskParams.metadataRoot).map(val => val.toLowerCase());
     listings.forEach(listing =>
     {
         updateListingAttributes(submissionResource, listing);
@@ -470,7 +470,7 @@ function getListingAttributes(listingWithPlatAbsPath: string): any
     {
         var propFiles = fs.readdirSync(listingWithPlatAbsPath).filter(p =>
             fs.statSync(path.join(listingWithPlatAbsPath, p)).isFile() &&
-            path.extname(p) == '.txt');
+            path.extname(p) != undefined && path.extname(p).toLowerCase() == '.txt');
 
         propFiles.forEach(propPath =>
         {
@@ -513,7 +513,7 @@ function updateImageMetadata(imageTypeMap: any, imageArray: any[], imagesAbsPath
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
-                path.extname(p) == '.png') // Store only supports png
+                path.extname(p) != undefined && path.extname(p).toLowerCase() == '.png') // Store only supports png
 
             imageFiles.forEach(img =>
             {
