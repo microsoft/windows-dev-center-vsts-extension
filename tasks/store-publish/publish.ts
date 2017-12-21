@@ -513,7 +513,7 @@ function updateImageMetadata(imageTypeMap: any, imageArray: any[], imagesAbsPath
             var currentFiles = fs.readdirSync(imageTypeAbs);
             var imageFiles = currentFiles.filter(p =>
                 !fs.statSync(path.join(imageTypeAbs, p)).isDirectory() &&
-                path.extname(p) != undefined && path.extname(p).toLowerCase() == '.png') // Store only supports png
+                path.extname(p) == '.png') // Store only supports png
 
             imageFiles.forEach(img =>
             {
