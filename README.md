@@ -107,7 +107,7 @@ $(Metadata path)
 
 [Examples](#metadata-structure-example) are available below.
 
-If the **Metadata update method** parameter is set to *Text Metadata*, text files are expected. If it is set to *JSON-formatted Metadata*, then JSON files are expected.
+If the **Metadata update method** parameter is set to *Text Metadata*, text files are expected. If it is set to *JSON-formatted Metadata*, then JSON files are expected. All folder and file names are case-sensitive.
 
 If text files are expected, then there should be one text file per metadata attribute that you wish to update, and it should have the same name as the attribute in question. For string attributes, the entire file contents will be used as-is. For array attributes (e.g. keywords, hardware capabilities), each non-empty line will be considered as an element of the array.
 
@@ -117,12 +117,12 @@ Metadata from the previous submission is always preserved if it is not present i
 
 You can find the list of accepted attributes for the language code listings [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#base-listing-object). Note that the task will automatically set the ```images``` attribute for you based on the file structure you provide, so you should not specify it as it will be overridden.
 
-You can find the list of accepted names for platform overrides [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions #listing-object).
+You can find the list of accepted names for platform overrides [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#listing-object).
 
 In the case of images, images from the previous submission are deleted, and must therefore be supplied again. Accepted attributes for the images can be found [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#image-object). Note that the task will
 automatically set the ```fileName```, ```fileStatus```, ```id``` and ```imageType``` attributes for you, so you should not specify them as they will be overridden. The ```imageType``` attribute will correspond to the name of the folder in which your image is placed. The list of accepted image types can be found [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#image-object).
 
-The Store only supports images in PNG format. If you include images in any other format, they will be ignored.
+The Store only supports images in png format. If you include images in any other format, they will be ignored.
 
 #### Metadata structure example
 
