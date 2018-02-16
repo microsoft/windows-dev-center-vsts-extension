@@ -14,7 +14,7 @@ import tl = require('vsts-task-lib');
 var streamifier = require('streamifier'); // streamifier has no typings
 
 /** How long to wait between retries (in ms) */
-const RETRY_DELAY = 5000;
+const RETRY_DELAY = 60000;
 
 /** After how long should a connection be given up (in ms). */
 const TIMEOUT = 600000;
@@ -262,9 +262,10 @@ export function withRetry<T>(
     {
         if (numRetries > 0 && (!errPredicate || errPredicate(err)))
         {
+            var randomDelay: number = Math.floor(Math.random() * RETRY_DELAY + RETRY_DELAY); // RETRY_DELAY <= randomDelay  < 2 * RETRY_DELAY
             console.log(`Operation failed with ${err}`);
-            console.log(`Waiting ${RETRY_DELAY / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
-            return Q.delay(RETRY_DELAY).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
+            console.log(`Waiting ${randomDelay / 1000} seconds then retrying... (${numRetries - 1} retrie(s) left)`);
+            return Q.delay(randomDelay).then(() => withRetry(numRetries - 1, promiseGenerator, errPredicate));
         }
         else
         {
@@ -275,17 +276,18 @@ export function withRetry<T>(
     });
 }
 
-/** Indicates whether the given object is an HTTP response for a 4xx error. */
-export function is400Error(err): boolean
+/** Indicates whether the given object is an HTTP response for a retryable error. */
+export function isRetryableError(err): boolean
 {
     // Does this look like a ResponseInformation?
     if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
     {
-        return err.response.statusCode >= 400
-            && err.response.statusCode < 500
+        return err.response.statusCode == 429 // 429 code is returned by the API for throttle down. This is retriable
+            || err.response.statusCode >= 500
     }
 
-    return false;
+    // Default to retry if no err information.
+    return true;
 }
 
 /**

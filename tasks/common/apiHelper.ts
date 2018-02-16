@@ -191,8 +191,8 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
     const POLL_DELAY = 300000;  // Delay 5 minutes between poll requests
     var submissionCheckGenerator = () => checkSubmissionStatus(token, resourceLocation, publishMode);
     return request.withRetry(NUM_RETRIES, submissionCheckGenerator, err =>
-        // Keep trying unless it's a 400 error or the message is the one we use for failed commits.
-        !(request.is400Error(err) || (err != undefined && err.message == COMMIT_FAILED_MSG))).
+        // Keep trying unless it's a non-retriable error or the message is the one we use for failed commits.
+        (request.isRetryableError(err) && !(err != undefined && err.message == COMMIT_FAILED_MSG))).
         then(status =>
         {
             if (status)
@@ -289,7 +289,7 @@ export function createSubmission(token: request.AccessToken, url: string): Q.Pro
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
-    return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
+    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err));
 }
 
 /**
@@ -308,7 +308,7 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
-    return request.withRetry(NUM_RETRIES, putGenerator, err => !request.is400Error(err));
+    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err));
 }
 
 /**
