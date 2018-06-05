@@ -83,7 +83,7 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
         if (dict.hasOwnProperty(entry))
         {
             // Sort in descending order of versions and only keep number of packages that we need
-            dict[entry].sort().reverse();
+            dict[entry].sort(compareVersions).reverse();
             dict[entry].slice(0, numberOfPackagesToKeep).forEach(bundle => versionsToKeep.add(bundle));
         }
     }
@@ -106,6 +106,47 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
             submissionPackage.fileStatus = 'PendingDelete';
         }
     });
+}
+
+/**
+ * Compares two version strings, returns a positive integer if X is greated than Y,
+ * negative if Y is greater than X, 0 if equal.
+ * @param x The version string to compare in the form of X[.X]* | X : number
+ * @param y The version string to compare in the form of X[.X]* | X : number
+ * Examples:
+ * 2 > 1.5.1 > 1.5.0.45
+ * 1.7 == 1.7.0.0
+ */
+function compareVersions(x: string, y: string): number {
+    var i = 0;
+    var xParts = x.split('.');
+    var yParts = y.split('.');
+    var minLengthToCompare = Math.min(xParts.length, yParts.length);
+
+    // Compare common parts
+    for (i = 0; i < minLengthToCompare; i++) {
+        var diff = parseInt(xParts[i], 10) - parseInt(yParts[i], 10);
+        if (diff) {
+            return diff;
+        }
+    }
+
+    if (xParts.length == yParts.length) {
+        return 0;
+    }
+
+    // Min set of common segments is equal, check for extra segments greater than zero
+    var longerVersion = minLengthToCompare == xParts.length ? yParts : xParts;
+    var multiplier = xParts.length > yParts.length ? 1 : -1;
+    for (i = 0; i < longerVersion.length - minLengthToCompare; i++) {
+        var part = parseInt(longerVersion[minLengthToCompare + i], 10);
+        if (part !== 0) {
+            return multiplier * part;
+        }
+    }
+
+    // If we reached this, we are in a case of 1.7 == 1.7.0.0
+    return 0;
 }
 
 /**
