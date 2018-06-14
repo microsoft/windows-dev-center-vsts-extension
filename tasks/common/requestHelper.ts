@@ -7,7 +7,7 @@
 
 import http = require('http'); // Only used for types
 
-import uuid = require('node-uuid');
+import uuidV4 = require('uuid/v4');
 import Q = require('q');
 import request = require('request');
 import tl = require('vsts-task-lib');
@@ -127,6 +127,20 @@ export function performRequest<T>(
         options.timeout = TIMEOUT;
     }
 
+    // Log correlation Id for better diagnosis
+    var correlationId = uuidV4();
+    tl.debug(`Starting request with correlation id: ${correlationId}`);
+    if (options.headers === undefined)
+    {
+        options.headers = {
+            'CorrelationId': correlationId
+        }
+    }
+    else
+    {
+        options.headers['CorrelationId'] = correlationId;
+    }
+
     var callback = function (error, response, body)
     {
         // For convenience, parse the body if it's JSON.
@@ -147,6 +161,7 @@ export function performRequest<T>(
         {
             deferred.resolve(body);
         }
+        tl.debug(`Finished request with correlation id: ${correlationId}`);
     }
 
     if (!stream)
