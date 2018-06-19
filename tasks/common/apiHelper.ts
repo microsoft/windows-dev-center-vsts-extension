@@ -122,30 +122,32 @@ function compareVersions(x: string, y: string): number {
     var xParts = x.split('.');
     var yParts = y.split('.');
     var minLengthToCompare = Math.min(xParts.length, yParts.length);
+    var shorterVersion = [];
+    var longerVersion = [];
+    if (minLengthToCompare == xParts.length) {
+        shorterVersion = xParts;
+        longerVersion = yParts;
+    } else {
+        shorterVersion = yParts;
+        longerVersion = xParts;
+    }
+    var diffLength = Math.abs(xParts.length - yParts.length);
 
-    // Compare common parts
-    for (i = 0; i < minLengthToCompare; i++) {
+    // Add zeroes to shorter version to handle all cases as equal length
+    for (i = 0; i < diffLength; i++)
+    {
+        shorterVersion.push('0');
+    }
+
+    // Compare parts
+    for (i = 0; i < longerVersion.length; i++) {
         var diff = parseInt(xParts[i], 10) - parseInt(yParts[i], 10);
         if (diff) {
             return diff;
         }
     }
 
-    if (xParts.length == yParts.length) {
-        return 0;
-    }
-
-    // Min set of common segments is equal, check for extra segments greater than zero
-    var longerVersion = minLengthToCompare == xParts.length ? yParts : xParts;
-    var multiplier = xParts.length > yParts.length ? 1 : -1;
-    for (i = 0; i < longerVersion.length - minLengthToCompare; i++) {
-        var part = parseInt(longerVersion[minLengthToCompare + i], 10);
-        if (part !== 0) {
-            return multiplier * part;
-        }
-    }
-
-    // If we reached this, we are in a case of 1.7 == 1.7.0.0
+    // Because both arrays are of equal length, 1.7 == 1.7.0.0
     return 0;
 }
 
