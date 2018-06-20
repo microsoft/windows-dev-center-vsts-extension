@@ -121,26 +121,17 @@ function compareVersions(x: string, y: string): number {
     var i = 0;
     var xParts = x.split('.');
     var yParts = y.split('.');
-    var minLengthToCompare = Math.min(xParts.length, yParts.length);
-    var shorterVersion = [];
-    var longerVersion = [];
-    if (minLengthToCompare == xParts.length) {
-        shorterVersion = xParts;
-        longerVersion = yParts;
-    } else {
-        shorterVersion = yParts;
-        longerVersion = xParts;
-    }
-    var diffLength = Math.abs(xParts.length - yParts.length);
-
+    
     // Add zeroes to shorter version to handle all cases as equal length
-    for (i = 0; i < diffLength; i++)
-    {
-        shorterVersion.push('0');
+    while (xParts.length > yParts.length) {
+        yParts.push('0');
+    }
+    while (yParts.length > xParts.length) {
+        xParts.push('0');
     }
 
     // Compare parts
-    for (i = 0; i < longerVersion.length; i++) {
+    for (i = 0; i < xParts.length; i++) {
         var diff = parseInt(xParts[i], 10) - parseInt(yParts[i], 10);
         if (diff) {
             return diff;
