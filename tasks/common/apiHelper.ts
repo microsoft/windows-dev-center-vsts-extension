@@ -83,7 +83,7 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
         if (dict.hasOwnProperty(entry))
         {
             // Sort in descending order of versions and only keep number of packages that we need
-            dict[entry].sort().reverse();
+            dict[entry].sort(compareVersions).reverse();
             dict[entry].slice(0, numberOfPackagesToKeep).forEach(bundle => versionsToKeep.add(bundle));
         }
     }
@@ -106,6 +106,40 @@ export function deleteOldPackages(submissionPackages: any, numberOfPackagesToKee
             submissionPackage.fileStatus = 'PendingDelete';
         }
     });
+}
+
+/**
+ * Compares two version strings, returns a positive integer if X is greated than Y,
+ * negative if Y is greater than X, 0 if equal.
+ * @param x The version string to compare in the form of X[.X]* | X : number
+ * @param y The version string to compare in the form of X[.X]* | X : number
+ * Examples:
+ * 2 > 1.5.1 > 1.5.0.45
+ * 1.7 == 1.7.0.0
+ */
+function compareVersions(x: string, y: string): number {
+    var i = 0;
+    var xParts = x.split('.');
+    var yParts = y.split('.');
+    
+    // Add zeroes to shorter version to handle all cases as equal length
+    while (xParts.length > yParts.length) {
+        yParts.push('0');
+    }
+    while (yParts.length > xParts.length) {
+        xParts.push('0');
+    }
+
+    // Compare parts
+    for (i = 0; i < xParts.length; i++) {
+        var diff = parseInt(xParts[i], 10) - parseInt(yParts[i], 10);
+        if (diff) {
+            return diff;
+        }
+    }
+
+    // Because both arrays are of equal length, 1.7 == 1.7.0.0
+    return 0;
 }
 
 /**
