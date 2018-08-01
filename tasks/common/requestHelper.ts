@@ -291,14 +291,20 @@ export function withRetry<T>(
     });
 }
 
-/** Indicates whether the given object is an HTTP response for a retryable error. */
-export function isRetryableError(err): boolean
+/** 
+ * Indicates whether the given object is an HTTP response for a retryable error. 
+ * @param err The error returned by the API
+ * @param relax Whether the function will return true for most error codes or not
+ * @description The Windows Store returns 429 and 503 for retryable errors. Relaxing the check will return true also for any error code greater or equal to 500
+ */
+export function isRetryableError(err:any, relax:boolean = true): boolean
 {
     // Does this look like a ResponseInformation?
     if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
     {
         return err.response.statusCode == 429 // 429 code is returned by the API for throttle down. This is retriable
-            || err.response.statusCode >= 500
+            || err.response.statusCode == 503
+            || (relax && err.response.statusCode >= 500)
     }
 
     // Default to retry if no err information.
