@@ -163,7 +163,8 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
         method: 'GET'
     };
 
-    return request.performAuthenticatedRequest<any>(token, requestParams).then(body =>
+    var getGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, getGenerator, err => request.isRetryableError(err)).then(body =>
     {
         var foundAppResource = (<any[]>body.value).find(x => x.primaryName == appName);
         if (foundAppResource)
@@ -293,7 +294,8 @@ export function getAppResource(token: request.AccessToken, appId: string): Q.Pro
         method: 'GET'
     };
 
-    return request.performAuthenticatedRequest<any>(token, requestParams);
+    var getGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, getGenerator, err => request.isRetryableError(err));
 }
 
 /**
@@ -307,7 +309,8 @@ export function deleteSubmission(token: request.AccessToken, url: string): Q.Pro
         method: 'DELETE'
     };
 
-    return request.performAuthenticatedRequest<void>(token, requestParams);
+    var deleteGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, deleteGenerator, err => request.isRetryableError(err, false));
 }
 
 /**
@@ -323,7 +326,7 @@ export function createSubmission(token: request.AccessToken, url: string): Q.Pro
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
-    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err));
+    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err, false));
 }
 
 /**
@@ -342,7 +345,7 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
-    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err));
+    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err, false));
 }
 
 /**
@@ -358,7 +361,8 @@ export function commitSubmission(token: request.AccessToken, url: string): Q.Pro
         method: 'POST'
     };
 
-    return request.performAuthenticatedRequest<void>(token, requestParams);
+    var postGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, postGenerator, err => request.isRetryableError(err, false));
 }
 
 /**
