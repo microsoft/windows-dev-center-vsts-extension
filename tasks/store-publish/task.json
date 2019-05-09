@@ -118,6 +118,15 @@
             "helpMarkDown": "Paths to any additional packages required by this application (one path per line). Minimatch pattern is supported."
         },
         {
+            "name": "commitSubmission",
+            "type": "boolean",
+            "label": "Commit Submission",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "Commit the submission after creating it in Dev Center. Not submitting allows Marketing teams to manually review the submission details before committing."
+        },
+        {
             "name": "skipPolling",
             "type": "boolean",
             "label": "Skip polling",

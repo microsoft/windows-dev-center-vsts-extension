@@ -87,6 +87,9 @@ export interface CorePublishParams
     /** A path where the zip file to be uploaded to the dev center will be stored. */
     zipFilePath: string;
 
+    /** If false, we will only create the submission but not commit it. If false skipPolling will also be set to false. */
+    commitSubmission: boolean;
+
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
 
@@ -194,8 +197,16 @@ export async function publishTask(params: PublishParams)
         await api.persistZip(zip, taskParams.zipFilePath, submissionResource.fileUploadUrl);
     }
 
-    console.log('Committing submission...');
-    await commitAppSubmission(submissionResource.id);
+    if (taskParams.commitSubmission)
+    {
+        console.log('Committing submission...');
+        await commitAppSubmission(submissionResource.id);
+    }
+    else
+    {
+        taskParams.skipPolling = true;
+        console.log('Commit submission is false. Skipping commit and polling...');
+    }
 
     if (taskParams.skipPolling)
     {
