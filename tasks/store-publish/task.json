@@ -121,7 +121,7 @@
             "name": "commitSubmission",
             "type": "boolean",
             "label": "Commit Submission",
-            "defaultValue": false,
+            "defaultValue": true,
             "groupName": "advanced",
             "required": true,
             "helpMarkDown": "Commit the submission after creating it in Dev Center. Not submitting allows Marketing teams to manually review the submission details before committing."
