@@ -44,7 +44,8 @@ function gatherParams()
         packages: [],
         skipPolling: tl.getBoolInput('skipPolling', true),
         numberOfPackagesToKeep: tl.getBoolInput('deletePackages') ? parseInt(tl.getInput('numberOfPackagesToKeep')) : null,
-        mandatoryUpdateDifferHours: tl.getBoolInput('isMandatoryUpdate') ? parseInt(tl.getInput('mandatoryUpdateDifferHours')) : null
+        mandatoryUpdateDifferHours: tl.getBoolInput('isMandatoryUpdate') ? parseInt(tl.getInput('mandatoryUpdateDifferHours')) : null,
+        rolloutPercentage: tl.getBoolInput('isStagedRollout') ? parseFloat(tl.getInput('rolloutPercentage')) : null
     };
 
     // Packages

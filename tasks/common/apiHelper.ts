@@ -369,9 +369,10 @@ export function commitSubmission(token: request.AccessToken, url: string): Q.Pro
  * Updates submission's package delivery options.
  * @param submissionResource The current submission request
  * @param mandatoryUpdateDifferHours The number of hours to differ until the packages in this submission become mandatory
+ * @param rolloutPercentage The percentage that a staged rollout will happen at
  * @returns A promise for the update of the submission on the server.
  */
-export function updatePackageDeliveryOptions(submissionResource: any, mandatoryUpdateDifferHours?: number): void
+export function updatePackageDeliveryOptions(submissionResource: any, mandatoryUpdateDifferHours?: number, rolloutPercentage?: number): void
 {
     var mandatoryUpdateEffectiveDate: Date = new Date(0);
     if (mandatoryUpdateDifferHours) {
@@ -383,6 +384,13 @@ export function updatePackageDeliveryOptions(submissionResource: any, mandatoryU
 
     submissionResource.packageDeliveryOptions.isMandatoryUpdate = mandatoryUpdateDifferHours !== null;
     submissionResource.packageDeliveryOptions.mandatoryUpdateEffectiveDate = mandatoryUpdateEffectiveDate.toISOString();
+
+    if (rolloutPercentage !== null) {
+        submissionResource.packageDeliveryOptions.packageRollout = {
+            isPackageRollout: true,
+            packageRolloutPercentage: rolloutPercentage.toPrecision()
+        };
+    }
 }
 
 /**

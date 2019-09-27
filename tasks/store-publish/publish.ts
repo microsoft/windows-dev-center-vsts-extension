@@ -95,6 +95,9 @@ export interface CorePublishParams
 
     /** If provided, specified the number of hours to differ until the packages in this submission become mandatory. */
     mandatoryUpdateDifferHours?: number;
+
+    /** If provided, specifies that the build only be rolled out to a specific percentage of people. */
+    rolloutPercentage?: number;
 }
 
 export interface AppIdParam
@@ -178,7 +181,7 @@ export async function publishTask(params: PublishParams)
     }
 
     console.log('Updating package delivery options...');
-    await api.updatePackageDeliveryOptions(submissionResource, taskParams.mandatoryUpdateDifferHours);
+    await api.updatePackageDeliveryOptions(submissionResource, taskParams.mandatoryUpdateDifferHours, taskParams.rolloutPercentage);
 
     console.log('Updating submission...');
     await putMetadata(submissionResource);

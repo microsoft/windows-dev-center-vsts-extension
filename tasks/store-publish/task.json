@@ -184,6 +184,24 @@
                 "EditableOptions": "True"
             },
             "visibleRule": "isMandatoryUpdate = true"
+        },
+        {
+            "name": "isStagedRollout",
+            "type": "boolean",
+            "label": "Staged Rollout",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Indicates whether you want to roll out updates gradually after this submission is published."
+        },
+        {
+            "name": "rolloutPercentage",
+            "type": "string",
+            "label": "Rollout Percentage",
+            "defaultValue": 100.00,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Indicates what percentage to start the rollout with."
         }
     ],
     "execution": {
