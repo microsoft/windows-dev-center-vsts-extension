@@ -180,7 +180,8 @@
             "defaultValue": 100.00,
             "groupName": "advanced",
             "required": false,
-            "helpMarkDown": "Indicates what percentage to start the rollout with."
+            "helpMarkDown": "Indicates what percentage to start the rollout with.",
+            "visibleRule": "isStagedRollout = true"
         }
     ],
     "execution": {
