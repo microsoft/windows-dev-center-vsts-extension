@@ -122,7 +122,7 @@ You can find the list of accepted attributes for the language code listings [her
 You can find the list of accepted names for platform overrides [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#listing-object).
 
 In the case of images, images from the previous submission are deleted, and must therefore be supplied again. Accepted attributes for the images can be found [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#image-object). Note that the task will
-automatically set the ```fileName```, ```fileStatus```, ```id``` and ```imageType``` attributes for you, so you should not specify them as they will be overridden. The ```imageType``` attribute will correspond to the name of the folder in which your image is placed. The list of accepted image types can be found [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#image-object).
+automatically set the ```fileName```, ```fileStatus```, ```id``` and ```imageType``` attributes for you, so you should not specify them as they will be overridden. The ```imageType``` attribute will correspond to the name of the folder in which your image is placed. The list of accepted image types can be found [here](https://msdn.microsoft.com/en-us/windows/uwp/monetize/manage-app-submissions#image-object). Json file (e.g. `mainScreenshot.json`) is neccessarry. Empty json (`{}`) is minimal requirement.
 
 The Store only supports images in png format. If you include images in any other format, they will be ignored.
 
