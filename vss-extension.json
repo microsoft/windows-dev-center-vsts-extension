@@ -1,14 +1,16 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.9.27",
+    "version": "0.9.33",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
     "categories": [
         "Build and release"
     ],
-    "galleryFlags": [],
+    "galleryFlags": [
+        "Public"
+    ],
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
@@ -80,7 +82,7 @@
                 "inputDescriptors": [],
                 "authenticationSchemes": [
                     {
-                        "type": "ms.vss-endpoint.endpoint-auth-scheme-service-principal",
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-basic",
                         "inputDescriptors": [
                             {
                                 "id": "url",
