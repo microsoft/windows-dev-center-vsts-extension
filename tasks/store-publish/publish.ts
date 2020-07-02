@@ -18,20 +18,21 @@ import tl = require('vsts-task-lib');
 /** Expected imageType values */
 const imageType: string[] = [
     'Screenshot',
-    'PromotionalArtwork414X180',
-    'PromotionalArtwork846X468',
-    'PromotionalArtwork558X756',
-    'PromotionalArtwork414X468',
-    'PromotionalArtwork558X558',
-    'PromotionalArtwork2400X1200',
-    'Icon',
-    'WideIcon358X173',
-    'BackgroundImage1000X800',
-    'SquareIcon358X358',
     'MobileScreenshot',
     'XboxScreenshot',
     'SurfaceHubScreenshot',
-    'HoloLensScreenshot'
+    'HoloLensScreenshot',
+    'StoreLogo9x16',
+    'StoreLogoSquare',
+    'Icon',
+    'PromotionalArt16x9',
+    'PromotionalArtwork2400X1200',
+    'XboxBrandedKeyArt',
+    'XboxTitledHeroArt',
+    'XboxFeaturedPromotionalArt',
+    'SquareIcon358X358',
+    'BackgroundImage1000X800',
+    'PromotionalArtwork414X180'
 ];
 
 /** How to update the app metadata */
