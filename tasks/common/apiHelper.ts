@@ -13,7 +13,7 @@ import path = require('path');
 var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
 import stream = require('stream');
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 var azure = require('azure-storage');
 var url = require('url');
 

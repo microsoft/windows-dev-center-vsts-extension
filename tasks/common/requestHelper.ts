@@ -10,7 +10,7 @@ import http = require('http'); // Only used for types
 import uuidV4 = require('uuid/v4');
 import Q = require('q');
 import request = require('request');
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 var streamifier = require('streamifier'); // streamifier has no typings
 
 /** How long to wait between retries (in ms) */

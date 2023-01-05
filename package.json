@@ -17,9 +17,10 @@
     "streamifier": "^0.1.1",
     "url": "^0.11.0",
     "uuid": "^3.0.1",
-    "vsts-task-lib": "^0.9.5"
+    "azure-pipelines-task-lib": "^4.1.0"
   },
   "devDependencies": {
+    "typescript": "4.0.2",
     "del": "^2.2.2",
     "gulp": "^3.9.1",
     "gulp-exec": "^2.1.2",
@@ -29,7 +30,7 @@
     "gulp-replace": "^0.5.4",
     "gulp-tsc": "^1.2.0",
     "shelljs": "^0.7.3",
-    "vsts-task-lib": "^0.9.5",
+    "azure-pipelines-task-lib": "^4.1.0",
     "yargs": "^4.8.1"
   }
 }
