@@ -2,7 +2,7 @@
  * General helper to process input variables.
  */
 
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 import path = require('path');
 
 var glob = require('glob');
