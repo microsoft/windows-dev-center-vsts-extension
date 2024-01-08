@@ -3,14 +3,11 @@
  * and flights to the Store.
  */
 
-/// <reference path="../../typings/index.d.ts" />
-/// <reference path="../../node_modules/vsts-task-lib/task.d.ts" />
-
 import api = require('../common/apiHelper');
 import request = require('../common/requestHelper');
 
 import Q = require('q');
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 
 /** Core parameters for the flight task. */
 export interface CoreFlightParams

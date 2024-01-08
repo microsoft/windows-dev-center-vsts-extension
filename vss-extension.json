@@ -1,12 +1,12 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.9.34",
+    "version": "0.9.45",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
     "categories": [
-        "Build and release"
+        "Azure Pipelines"
     ],
     "galleryFlags": [
         "Public"

@@ -15,9 +15,9 @@
     "version": {
         "Major": "0",
         "Minor": "10",
-        "Patch": "30"
+        "Patch": "36"
     },
-    "minimumAgentVersion": "1.83.0",
+    "minimumAgentVersion": "2.144.0",
     "instanceNameFormat": "Publish $(packagePath)",
     "groups": [
         {
@@ -189,6 +189,14 @@
     "execution": {
         "Node": {
             "target": "local/publishUi.js",
+            "argumentFormat": ""
+        },
+        "Node10": {
+            "target": "local/flightUi.js",
+            "argumentFormat": ""
+        },
+        "Node16": {
+            "target": "local/flightUi.js",
             "argumentFormat": ""
         }
     }
