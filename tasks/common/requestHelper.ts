@@ -9,7 +9,6 @@ import {v4 as uuidv4} from 'uuid';
 import Q = require('q');
 import request = require('request');
 import tl = require('azure-pipelines-task-lib');
-var streamifier = require('streamifier'); // streamifier has no typings
 
 /** How long to wait between retries (in ms) */
 const RETRY_DELAY = 60000;

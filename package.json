@@ -15,7 +15,6 @@
     "jszip": "^3.1.1",
     "q": "^1.4.1",
     "request": "^2.72.0",
-    "streamifier": "^0.1.1",
     "url": "^0.11.3",
     "uuid": "^9.0.1"
   },
@@ -23,7 +22,6 @@
     "@types/node": "^12.6.1",
     "@types/q": "^1.5.2",
     "@types/request": "^2.48.1",
-    "@types/streamifier": "^0.1.2",
     "del": "^5.0.0",
     "gulp": "^4.0.2",
     "gulp-exec": "^3.0.2",
