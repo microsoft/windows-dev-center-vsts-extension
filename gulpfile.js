@@ -18,8 +18,8 @@ const COMMON_TASK_DIR = 'common';
 const TASKS_DIR = 'tasks';
 const DEV_MANIFEST_OVERRIDE = {
     public: false,
-    "id": "windows-store-publish-v1-dev",
-    "name": "Windows Store V1 Dev",
+    "id": "windows-store-publish-dev",
+    "name": "Windows Store Dev",
 };
 
 // Get all task directories except common and transform them into gulp dests of the corresponding build directory
@@ -62,9 +62,9 @@ gulp.task('_extension_metadata', function ()
             , 'docs/**/*'               // Copy all content to be addressed by documentation
             ],
             { base: '.'})
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('devCenterApiEndpoint','devCenterApiEndpoint-v1-test')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"displayName": "Windows Dev Center"','"displayName": "Windows Dev Center V1 Dev"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"name": "devCenter"','"name": "devCenter-v1-dev"')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('devCenterApiEndpoint','devCenterApiEndpoint-dev')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"displayName": "Windows Dev Center"','"displayName": "Windows Dev Center Dev"')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"name": "devCenter"','"name": "devCenter-dev"')))
         .pipe(gulp.dest(BUILD_DIR));
 })
 
@@ -76,10 +76,10 @@ gulp.task('_task_metadata', function ()
             , 'tasks/*/task.json'   // Task manifest
             ])
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('8e70da9d-532d-4416-a07f-5ec10f84339f','5a6783fe-54ce-474f-91bd-f53805ccef03')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish"','"friendlyName": "Windows Store - Publish V1 Dev"')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish"','"friendlyName": "Windows Store - Publish Dev"')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('13dee6a7-3698-4b12-bbb4-b393560a3ebc','dd0469b9-aaa6-452a-9832-f41e19940169')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight"','"friendlyName": "Windows Store - Flight V1 Dev"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('connectedService:devCenter','connectedService:devCenter-v1-dev')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight"','"friendlyName": "Windows Store - Flight Dev"')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('connectedService:devCenter','connectedService:devCenter-dev')))
         .pipe(gulp.dest(BUILD_DIR));
 });
 
