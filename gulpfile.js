@@ -75,9 +75,9 @@ gulp.task('_task_metadata', function ()
         .src(['tasks/*/*.png'       // Task icons
             , 'tasks/*/task.json'   // Task manifest
             ])
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('8e70da9d-532d-4416-a07f-5ec10f84339f','5a6783fe-54ce-474f-91bd-f53805ccef03')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('8e70da9d-532d-4416-a07f-5ec10f84339f','81e53284-f02d-4878-abca-20f08327121c')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish"','"friendlyName": "Windows Store - Publish Dev"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('13dee6a7-3698-4b12-bbb4-b393560a3ebc','dd0469b9-aaa6-452a-9832-f41e19940169')))
+        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('13dee6a7-3698-4b12-bbb4-b393560a3ebc','91c056be-bd43-4b3f-a4bf-6eb489bc121d')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight"','"friendlyName": "Windows Store - Flight Dev"')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('connectedService:devCenter','connectedService:devCenter-dev')))
         .pipe(gulp.dest(BUILD_DIR));
