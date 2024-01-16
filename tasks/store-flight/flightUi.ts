@@ -9,7 +9,7 @@ import fli = require('./flight');
 
 import path = require('path');
 
-import tl = require('vsts-task-lib');
+import tl = require('azure-pipelines-task-lib');
 
 /** Obtain and validate parameters from task UI. */
 function gatherParams()

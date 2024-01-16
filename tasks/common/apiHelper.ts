@@ -3,8 +3,6 @@
  * create files required by the API, etc.
  */
 
-/// <reference path="../../typings/index.d.ts" />
-
 import request = require('./requestHelper');
 
 import fs = require('fs');
@@ -13,8 +11,9 @@ import path = require('path');
 var JSZip = require('jszip'); // JSZip typings have not been updated to the version we're using
 import Q = require('q');
 import stream = require('stream');
-import tl = require('vsts-task-lib');
-var azure = require('azure-storage');
+import tl = require('azure-pipelines-task-lib');
+import { AnonymousCredential, BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
+var azure = require('@azure/storage-blob');
 var url = require('url');
 
 /**
@@ -445,34 +444,24 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
      * the base64 parameter. In our case, we just take the compromise of replacing every instance
      * of '+' with its url-encoded counterpart. */
     var dest = blobUrl.replace(/\+/g, '%2B');
+    const blockBlobClient = new BlockBlobClient(dest, new AnonymousCredential());
 
-    var urlObject = url.parse(dest);
-
-    var pathParts = urlObject.pathname.split("/");
-    //pathname property returns path with leading '/'. Thus, pathParts[0] will always be empty.
-    var containerName = pathParts[1];
-    var blobName = pathParts[2];
-
-    var host = urlObject.host;
-    var sasToken = urlObject.search;
-    var retryOperations = new azure.ExponentialRetryPolicyFilter();
-    var blobService = azure.createBlobServiceWithSas(host, sasToken).withFilter(retryOperations);
     var options = {
-        parallelOperationThreadCount: 5,
-        timeoutIntervalInMs: 90000,
-        maximumExecutionTimeInMs: 900000
+        concurrency: 5
     };
+
     var defer = Q.defer();
-    blobService.createBlockBlobFromLocalFile(containerName, blobName, filePath, options, function (error, result, response) {
-        if (!error) {
-            console.log("Successfully uploaded file!");
+
+    blockBlobClient.uploadFile(filePath, options)
+        .then(() => {
+            console.log(`Successfully uploaded file!`);
             defer.resolve();
-        }
-        else {
-            tl.error(`Failed to upload file! Error = ${error}`);
-            defer.reject(`Failed to upload file! Error = ${error}`);
-        }
-    });
+        })
+        .catch(err => {
+            tl.error(`Failed to upload zip file to ${blobUrl}. Error = ${err}`);
+            defer.reject(err);
+        });
+
     return defer.promise;
 }
 

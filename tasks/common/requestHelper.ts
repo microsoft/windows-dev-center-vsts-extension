@@ -3,15 +3,12 @@
  * This is mainly a wrapper for the 'request' npm module that uses promises instead of callbacks.
  */
 
-/// <reference path="../../typings/index.d.ts" />
-
 import http = require('http'); // Only used for types
 
-import uuidV4 = require('uuid/v4');
+import {v4 as uuidv4} from 'uuid';
 import Q = require('q');
 import request = require('request');
-import tl = require('vsts-task-lib');
-var streamifier = require('streamifier'); // streamifier has no typings
+import tl = require('azure-pipelines-task-lib');
 
 /** How long to wait between retries (in ms) */
 const RETRY_DELAY = 60000;
@@ -128,7 +125,7 @@ export function performRequest<T>(
     }
 
     // Log correlation Id for better diagnosis
-    var correlationId = uuidV4();
+    var correlationId = uuidv4();
     tl.debug(`Starting request with correlation id: ${correlationId}`);
     if (options.headers === undefined)
     {

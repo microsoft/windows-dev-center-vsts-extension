@@ -15,9 +15,9 @@
     "version": {
         "Major": "0",
         "Minor": "2",
-        "Patch": "28"
+        "Patch": "29"
     },
-    "minimumAgentVersion": "1.83.0",
+    "minimumAgentVersion": "2.144.0",
     "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
     "groups": [
         {
@@ -167,6 +167,14 @@
     ],
     "execution": {
         "Node": {
+            "target": "local/flightUi.js",
+            "argumentFormat": ""
+        },
+        "Node10": {
+            "target": "local/flightUi.js",
+            "argumentFormat": ""
+        },
+        "Node16": {
             "target": "local/flightUi.js",
             "argumentFormat": ""
         }
