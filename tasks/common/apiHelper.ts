@@ -454,7 +454,7 @@ function uploadZip(filePath: string, blobUrl: string): Q.Promise<any>
 
     blockBlobClient.uploadFile(filePath, options)
         .then(() => {
-            console.log(`Successfully uploaded file!`);
+            tl.debug(`Successfully uploaded file!`);
             defer.resolve();
         })
         .catch(err => {
