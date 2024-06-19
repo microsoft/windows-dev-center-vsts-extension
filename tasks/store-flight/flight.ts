@@ -32,6 +32,9 @@ export interface CoreFlightParams
     /** A path where the zip file to be uploaded to the dev center will be stored. */
     zipFilePath: string;
 
+    /** If true, auto commit submission to Dev Center. */
+    commitSubmission: boolean;
+
     /** If true, we will exit immediately after commit without polling submission till app is published. */
     skipPolling: boolean;
 
@@ -129,23 +132,26 @@ export async function flightTask(params: FlightParams)
         await api.persistZip(zip, taskParams.zipFilePath, flightSubmissionResource.fileUploadUrl);
     }
 
-    console.log('Committing flight submission...');
-    await commitFlightSubmission(flightSubmissionResource.id);
+    if (taskParams.commitSubmission)
+    {
+        console.log('Committing flight submission...');
+        await commitFlightSubmission(flightSubmissionResource.id);
 
-    if (taskParams.skipPolling)
-    {
-        console.log('Skip polling option is checked. Skipping polling...');
-        console.log(`Click here ${submissionUrl} to check the status of the submission in Dev Center`);
-    }
-    else
-    {
-        console.log('Polling flight submission...');
-        var resourceLocation = `applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
-        await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
+        if (taskParams.skipPolling)
+        {
+            console.log('Skip polling option is checked. Skipping polling...');
+            console.log(`Click here ${submissionUrl} to check the status of the submission in Dev Center`);
+        }
+        else
+        {
+            console.log('Polling flight submission...');
+            var resourceLocation = `applications/${appId}/flights/${flightId}/submissions/${flightSubmissionResource.id}`;
+            await api.pollSubmissionStatus(currentToken, resourceLocation, flightSubmissionResource.targetPublishMode);
+        }
     }
 
     // Attach summary file for easy access to submission on Dev Center from release Summary tab
-    var summaryText = api.buildSummaryText(appResource.primaryName, flightResource.friendlyName, submissionUrl, taskParams.skipPolling ? 'publishing' : 'in the store');
+    var summaryText = api.buildSummaryText(appResource.primaryName, flightResource.friendlyName, submissionUrl, taskParams.commitSubmission ? 'submitted' : (taskParams.skipPolling ? 'publishing' : 'in the store'));
     api.attachSubmissionSummary(summaryText);
 
     tl.setResult(tl.TaskResult.Succeeded, 'Flight submission completed');

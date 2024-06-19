@@ -42,6 +42,7 @@ function gatherParams()
         force: tl.getBoolInput('force', true),
         zipFilePath: path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages: [],
+        commitSubmission: tl.getBoolInput('commitSubmission', true),
         skipPolling: tl.getBoolInput('skipPolling', true),
         numberOfPackagesToKeep: tl.getBoolInput('deletePackages') ? parseInt(tl.getInput('numberOfPackagesToKeep')) : null,
         mandatoryUpdateDifferHours: tl.getBoolInput('isMandatoryUpdate') ? parseInt(tl.getInput('mandatoryUpdateDifferHours')) : null
@@ -101,6 +102,7 @@ function dumpParams(taskParams: fli.FlightParams): void
     tl.debug(`Force delete: ${taskParams.force}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
     tl.debug(`Local ZIP file path: ${taskParams.zipFilePath}`);
+    tl.debug(`commitSubmission: ${taskParams.commitSubmission}`);
     tl.debug(`skipPolling: ${taskParams.skipPolling}`);
     tl.debug(`deletePackages: ${taskParams.numberOfPackagesToKeep ? true : false}`);
     tl.debug(`numberOfPackagesToKeep: ${taskParams.numberOfPackagesToKeep}`);
