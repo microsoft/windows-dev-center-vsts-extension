@@ -43,6 +43,7 @@ function gatherParams()
         updateImages: tl.getBoolInput('updateImages', false),
         zipFilePath : path.join(tl.getVariable('Agent.WorkFolder'), 'temp.zip'),
         packages : [],
+        commitSubmission : tl.getBoolInput('commitSubmission', true),
         skipPolling : tl.getBoolInput('skipPolling', true),
         numberOfPackagesToKeep: tl.getBoolInput('deletePackages') ? parseInt(tl.getInput('numberOfPackagesToKeep')) : null,
         mandatoryUpdateDifferHours: tl.getBoolInput('isMandatoryUpdate') ? parseInt(tl.getInput('mandatoryUpdateDifferHours')) : null
@@ -101,6 +102,7 @@ function dumpParams(taskParams: pub.PublishParams): void
     tl.debug(`Update images: ${taskParams.updateImages}`);
     tl.debug(`Metadata root: ${taskParams.metadataRoot}`);
     tl.debug(`Packages: ${taskParams.packages.join(',')}`);
+    tl.debug(`commitSubmission: ${taskParams.commitSubmission}`);
     tl.debug(`skipPolling: ${taskParams.skipPolling}`);
     tl.debug(`deletePackages: ${taskParams.numberOfPackagesToKeep ? true : false}`);
     tl.debug(`numberOfPackagesToKeep: ${taskParams.numberOfPackagesToKeep}`);
