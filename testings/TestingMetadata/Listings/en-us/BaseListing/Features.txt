@@ -1,0 +1,1 @@
+Microsoft test only. Returns the test app version number. For testing only.

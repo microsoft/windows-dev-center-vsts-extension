@@ -1,0 +1,185 @@
+{
+    "id": "96d0c453-efe7-4c9b-8b0c-fde9a356a5cd",
+    "name": "store-package",
+    "friendlyName": "Windows Store - Package",
+    "description": "Create a Json and Zip file based on Store Broker PDPs and Config file",
+    "author": "Microsoft Corporation",
+    "helpMarkDown": "Visit our GitHub repository for help on usage for the [package task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---package)",
+    "category": "Build",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "demands": [
+        "DotNetFramework"
+    ],
+    "version": {
+        "Major": "2",
+        "Minor": "3",
+        "Patch": "27"
+    },
+    "minimumAgentVersion": "2.117.0",
+    "instanceNameFormat": "Package $(appName)",
+    "groups": [
+        {
+            "name": "advanced",
+            "displayName": "Advanced Options",
+            "isExpanded": false
+        }
+    ],
+    "inputs": [
+        {
+            "name": "serviceEndpoint",
+            "type": "connectedService:devCenter-V2",
+            "label": "Service endpoint",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials"
+        },
+        {
+            "name": "sbConfigPath",
+            "type": "filePath",
+            "label": "Config File Full Path",
+            "defaultValue": "",
+            "helpMarkDown": "Full Path to the Config File. If not specified, it will be generated based on the current Prod submission",
+            "required": false
+        },
+        {
+            "name": "appNameType",
+            "type": "pickList",
+            "label": "App identification method",
+            "helpMarkDown": "How to determine the app to pacakge. This is only required if no config file is provided.",
+            "defaultValue": "AppId",
+            "options": {
+                "AppId": "ID",
+                "AppName": "Primary name"
+            },
+            "required": false,
+            "visibleRule": "sbConfigPath = \"\""
+        },
+        {
+            "name": "appId",
+            "type": "string",
+            "label": "Application ID",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "ID of the application, found in the URL for the application's page on the Dev Center. This is only required if no config file is provided.",
+            "visibleRule": "sbConfigPath = \"\" && appNameType = AppId"
+        },
+        {
+            "name": "appName",
+            "type": "string",
+            "label": "Application primary name",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "Primary name of the application, found at the top of the application's page on the Dev Center. This is only required if no config file is provided.",
+            "visibleRule": "sbConfigPath = \"\" && appNameType = AppName"
+        },
+        {
+            "name": "sourceFolder",
+            "type": "filePath",
+            "label": "Source Folder",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "The source folder of the packages that the publishing task consume"
+        },
+        {
+            "name": "contents",
+            "type": "multiLine",
+            "label": "Contents",
+            "required": false,
+            "helpMarkDown": "App packages that are part of the submission. Expect the relative path of the packages with respect to the source folder. Minimatch pattern is supported."
+        },
+        {
+            "name": "pdpPath",
+            "type": "string",
+            "label": "PDP Root Path",
+            "defaultValue": "",
+            "helpMarkDown": "Your PDPRootPath is expected to be in the following file structure: [PDPRootPath]\\\\[lang-code]\\\\...\\\\[PDPFilename]",
+            "required": false
+        },
+        {
+            "name": "pdpMediaPath",
+            "type": "string",
+            "label": "Media Root Path",
+            "defaultValue": "",
+            "helpMarkDown": "This is where the screenshots and trailers for your listings are stored. Your media must be placed with this structure: [MediaRootPath]\\\\[Release]\\\\[lang-code]\\\\...\\img.png. The 'Release' is the 'Release' attribute found at the top of the corresponding PDP file. If MediaRootPath is specified here, it will override the value from the config file. This must be specified here or in your config file if you are specifying `PDP Root Path`.",
+            "required": false
+        },
+        {
+            "name": "outSBPackagePath",
+            "type": "string",
+            "label": "Output Path",
+            "defaultValue": "$(System.DefaultWorkingDirectory)\\SBOutDir",
+            "helpMarkDown": "Output directory where Store Broker will output generated files out of `New-SubmissionPackage` command. This overrides the value from the config file. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/SETUP.md#getting-your-pdps)",
+            "required": true
+        },
+        {
+            "name": "outSBName",
+            "type": "string",
+            "label": "Output Name",
+            "defaultValue": "MyNewSubmissionPackage",
+            "helpMarkDown": "The common name to use for the .json/.zip pair. If specified, this overrides the value from the config file.",
+            "required": true
+        },
+        {
+            "name": "pdpReleasePath",
+            "type": "string",
+            "label": "Release",
+            "defaultValue": "",
+            "helpMarkDown": "Relative path to the correct subfolder within 'PDPRootPath' to find the PDP files to use. If specified, this overrides the value from the config file.",
+            "required": false,
+            "visibleRule": "appNameType = Hidden"
+        },
+        {
+            "name": "pdpInclude",
+            "type": "multiLine",
+            "label": "PDP File Names",
+            "defaultValue": "",
+            "helpMarkDown": "List of PDP file names that SHOULD be processed. Each line supports wildcards, eg 'ProductDescription*.xml'. Ex: \"*.xml.lss\", \"*.xml.lct\". Minimatch is not supported. If specified, this overrides the value from the config file.",
+            "required": false
+        },
+        {
+            "name": "pdpExclude",
+            "type": "multiLine",
+            "label": "PDP Exclude",
+            "defaultValue": "",
+            "helpMarkDown": "List of PDP file names that SHOULD NOT be processed. Each line supports wildcards, eg 'ProductDescription*.xml'. Ex: \"*.xml.lss\", \"*.xml.lct\". Minimatch is not supported. If specified, this overrides the value from the config file.",
+            "required": false,
+            "visibleRule": "appNameType = Hidden"
+        },
+        {
+            "name": "languageExclude",
+            "type": "multiLine",
+            "label": "Language Exclude",
+            "defaultValue": "",
+            "helpMarkDown": "List of lang-code strings that SHOULD NOT be processed. Each line represents a language code. Ex: \"default\", \"qps-ploc\". If specified, this overrides the value from the config file.",
+            "required": false
+        },
+        {
+            "name": "logPath",
+            "type": "string",
+            "label": "Log Path",
+            "defaultValue": "$(System.DefaultWorkingDirectory)\\SBLog.txt",
+            "required": false,
+            "groupName": "advanced",
+            "helpMarkDown": "The full path for the Store Broker log file"
+        },
+        {
+            "name": "disableTelemetry",
+            "type": "boolean",
+            "label": "Disable Telemetry",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Whether to disable or not the collection of data. See Microsoft's [Privacy Policy](https://privacy.microsoft.com/en-US/privacystatement) and [Terms of Use](https://www.microsoft.com/en-us/legal/intellectualproperty/copyright/default.aspx). For specific information on Store Broker's telemetry, see [Store Broker Telemetry](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#telemetry)"
+        }
+    ],
+    "execution": {
+        "PowerShell3": {
+            "target": "$(currentDirectory)\\packageUi.ps1",
+            "argumentFormat": "",
+            "workingDirectory": "$(currentDirectory)"
+        }
+    }
+}

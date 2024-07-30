@@ -1,0 +1,512 @@
+{
+    "id": "TO_BE_SET",
+    "name": "TO_BE_SET",
+    "friendlyName": "TO_BE_SET",
+    "description": "TO_BE_SET",
+    "author": "Microsoft Corporation",
+    "helpMarkDown": "Visit our GitHub repository for help on usage for [this task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---publish)",
+    "category": "Deploy",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "demands": [
+        "DotNetFramework"
+    ],
+    "version": {
+        "Major": "2",
+        "Minor": "4",
+        "Patch": "11"
+    },
+    "minimumAgentVersion": "2.117.0",
+    "instanceNameFormat": "Publish $(appName)",
+    "groups": [
+        
+        {
+            "name": "rolloutOptions",
+            "displayName": "Rollout Options",
+            "isExpanded": false
+        },
+        {
+            "name": "advanced",
+            "displayName": "Advanced Options",
+            "isExpanded": false
+        }
+    ],
+    "inputs": [
+        {
+            "name": "serviceEndpoint",
+            "type": "connectedService:devCenter-V2",
+            "label": "Service endpoint",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Windows Developer Center endpoint configured with your credentials"
+        },
+        {
+            "name": "appNameType",
+            "type": "pickList",
+            "label": "App identification method",
+            "helpMarkDown": "How to determine the app to publish",
+            "defaultValue": "AppId",
+            "options": {
+                "AppId": "ID",
+                "AppName": "Primary name"
+            }
+        },
+        {
+            "name": "appId",
+            "type": "string",
+            "label": "Application ID",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the application, found in the URL for the application's page on the Dev Center",
+            "visibleRule": "appNameType = AppId"
+        },
+        {
+            "name": "appName",
+            "type": "string",
+            "label": "Application primary name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Primary name of the application, found at the top of the application's page on the Dev Center",
+            "visibleRule": "appNameType = AppName"
+        },
+        {
+            "name": "releaseTrack",
+            "type": "pickList",
+            "label": "Track",
+            "defaultValue": "TO_BE_SET",
+            "helpMarkDown": "",
+            "options": {
+                "Production": "Production",
+                "Flight": "Flight",
+                "Sandbox": "Sandbox"
+            }
+        },
+        {
+            "name": "flightNameType",
+            "type": "pickList",
+            "label": "Flight identification method",
+            "helpMarkDown": "How to determine the flight to publish to",
+            "defaultValue": "FlightId",
+            "options": {
+                "FlightId": "ID",
+                "FlightName": "Primary name"
+            },
+            "visibleRule": "releaseTrack = Flight"
+        },
+        {
+            "name": "flightId",
+            "type": "string",
+            "label": "Flight ID",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the flight as seen on the Dev Center",
+            "visibleRule": "releaseTrack = Flight && flightNameType = FlightId"
+        },
+        {
+            "name": "flightName",
+            "type": "string",
+            "label": "Flight name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Name of the flight as seen on the Dev Center",
+            "visibleRule": "releaseTrack = Flight && flightNameType = FlightName"
+        },
+        {
+            "name": "sandboxId",
+            "type": "string",
+            "label": "Sandbox Id",
+            "defaultValue": "",
+            "required": false,
+            "helpMarkDown": "ID of the Sandbox to publish to. This is typically only used by users publishing to XBox",
+            "visibleRule": "releaseTrack = Sandbox"
+        },
+        {
+            "name": "inputMethod",
+            "type": "pickList",
+            "label": "Input Method",
+            "defaultValue": "Packages",
+            "required": true,
+            "helpMarkDown": "Select the method for input. You could choose either selecting a source folder of packages or use a json and zip file. The json and zip are the output of the `Windows Store - Package` task.",
+            "options": {
+                "JsonAndZip": "Json & Zip",
+                "Packages": "Packages"
+            }
+        },
+        {
+            "name": "jsonPath",
+            "type": "filePath",
+            "label": "JSON Path",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Specify the path to a JSON file that contains the useful information for submission. This JSON is produced by the `Windows Store - Package` task.",
+            "visibleRule": "inputMethod = JsonAndZip"
+        },
+        {
+            "name": "zipPath",
+            "type": "filePath",
+            "label": "Zip Path",
+            "required": true,
+            "helpMarkDown": "Specify the path to a zip file that contains all the packages, images and videos you want to submit. This Zip is produced by the `Windows Store - Package` task.",
+            "visibleRule": "inputMethod = JsonAndZip"
+        },
+        {
+            "name": "updateNotesForCertification",
+            "type": "boolean",
+            "label": "Update Notes For Certification",
+            "defaultValue": false,
+            "helpMarkDown": "This will change the `notesForCertification` field of the cloned submission to that which is specified in your json. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way)",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip"
+        },
+        {
+            "name": "updatePublishModeAndVisibility",
+            "type": "boolean",
+            "label": "Update Publish Mode And Visibility",
+            "defaultValue": false,
+            "helpMarkDown": "This will change the `targetPublishMode`, `targetPublishDate`, and `visibility` of the cloned submission to that which is specified in your json. Without doing this, keep in mind that your new submission will publish the same way as your previous submission (be that immediately, manual or time based). [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way)",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip && releaseTrack = Production"
+        },
+        {
+            "name": "updatePricingAndAvailability",
+            "type": "boolean",
+            "label": "Update Pricing And Availability",
+            "defaultValue": false,
+            "helpMarkDown": "This will change the `pricing`, `allowTargetFutureDeviceFamilies`, `allowMicrosoftDecideAppAvailabilityToFutureDeviceFamilies`, and `enterpriseLicensing` of the cloned submission to that which is specified in your json. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way)",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip && releaseTrack = Production"
+        },
+        {
+            "name": "updateAppProperties",
+            "type": "boolean",
+            "label": "Update App Properties",
+            "defaultValue": false,
+            "helpMarkDown": "This will change the `applicationCategory`, `hardwarePreferences`, `hasExternalInAppProducts`, `meetAccessibilityGuidelines`, `canInstallOnRemovableMedia`, `automaticBackupEnabled`, and `isGameDvrEnabled` of the cloned submission to that which is specified in your json. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way)",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip && releaseTrack = Production"
+        },
+        {
+            "name": "updateGamingOptions",
+            "type": "boolean",
+            "label": "Update Gaming Options",
+            "defaultValue": false,
+            "helpMarkDown": "This will update all values under the `gamingOptions` node specified in your json. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way)",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip && releaseTrack = Production"
+        },
+        {
+            "name": "jsonZipUpdateMetadata",
+            "type": "boolean",
+            "label": "Update Metadata",
+            "defaultValue": false,
+            "helpMarkDown": "Whether this submission should update metadata",
+            "required": true,
+            "visibleRule": "inputMethod = JsonAndZip && releaseTrack = Production"
+        },
+        {
+            "name": "sourceFolder",
+            "type": "filePath",
+            "label": "Source Folder",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "The source folder of the packages that the publishing task consume",
+            "visibleRule": "inputMethod = Packages"
+        },
+        {
+            "name": "contents",
+            "type": "multiLine",
+            "label": "Contents",
+            "required": true,
+            "helpMarkDown": "App packages that are part of the submission. Provide the relative path of the packages with respect to the source folder. For Sparse Bundles the format is <AppId>:<PackagePath> (e.g. XYZ123:$(Agent.WorkFolder)/*/*.appxbundle), specifying the AppId and Package Path (one path per line). Minimatch pattern is supported.",
+            "visibleRule": "inputMethod = Packages"
+        },
+        {
+            "name": "force",
+            "type": "boolean",
+            "label": "Delete pending submission",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Whether to delete an existing submission instead of failing the task"
+        },
+        {
+            "name": "isSparseBundle",
+            "type": "boolean",
+            "label": "Sparse Bundle",
+            "defaultValue": false,
+            "required": true,
+            "helpMarkDown": "Whether the app is a sparse bundle or not.",
+            "visibleRule": "inputMethod = Packages"
+        },
+        {
+            "name": "metadataUpdateMethod",
+            "type": "pickList",
+            "label": "Metadata update method",
+            "defaultValue": "NoUpdate",
+            "options": {
+                "NoUpdate": "No update",
+                "FolderStructure":  "Folder Structure"
+            },
+            "visibleRule" : "releaseTrack = Production && inputMethod = Packages && isSparseBundle = False"
+        },
+        {
+            "name": "metadataPath",
+            "type": "filePath",
+            "label": "Metadata root folder",
+            "defaultValue": "",
+            "helpMarkDown": "Path to a directory containing the metadata. Consult the documentation for the expected format.",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod = FolderStructure"
+        },
+        {
+            "name": "updateText",
+            "type": "boolean",
+            "label": "Update Text Listing",
+            "defaultValue": true,
+            "helpMarkDown": "Whether text listing should be updated.",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod == FolderStructure || jsonZipUpdateMetadata = true"
+        },
+        {
+            "name": "updateImages",
+            "type": "boolean",
+            "label": "Update Images",
+            "defaultValue": false,
+            "helpMarkDown": "Whether images should also be updated. **Warning**: if you check this box, all the old images of the listings you provide will be deleted.",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod == FolderStructure || jsonZipUpdateMetadata = true"
+        },
+        {
+            "name": "updateVideos",
+            "type": "boolean",
+            "label": "Update Videos",
+            "defaultValue": false,
+            "helpMarkDown": "Whether videos should also be updated. **Warning**: if you check this box, all the old videos of the listings you provide will be deleted.",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod == FolderStructure || jsonZipUpdateMetadata = true"
+        },
+        {
+            "name": "minimumMetadata",
+            "type": "boolean",
+            "label": "Update only specified metadata",
+            "defaultValue": false,
+            "helpMarkDown": "If this is checked, the task will update only the metadata attributes provided. This will not delete any missing attributes, like languages. [More info](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/README.md)",
+            "required": true,
+            "visibleRule": "metadataUpdateMethod == FolderStructure || jsonZipUpdateMetadata = true"
+        },
+        {
+            "name": "createRollout",
+            "type": "boolean",
+            "label": "Create Rollout",
+            "defaultValue": false,
+            "groupName": "rolloutOptions",
+            "required": true,
+            "helpMarkDown": "Create a rollout as part of this submission. If checked, the udpates on this submission will be delivered only to a percentage of customers in the production/flight group."
+        },
+        {
+            "name": "rollout",
+            "type": "pickList",
+            "label": "Rollout Percentage",
+            "defaultValue": "0.0",
+            "groupName": "rolloutOptions",
+            "required": true,
+            "helpMarkDown": "Choose the rollout percentage value. Valid values [0.0-100.0) zero included, one hundred excluded",
+            "options": {
+                "0.0": "0",
+                "0.1": "0.1",
+                "0.5": "0.5",
+                "1.0": "1",
+                "5.0": "5",
+                "10.0": "10",
+                "20.0": "20",
+                "40.0": "40",
+                "60.0": "60",
+                "80.0": "80"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "createRollout = true"
+        },
+        {
+            "name": "existingPackageRolloutAction",
+            "type": "pickList",
+            "label": "Existing Package Rollout Action",
+            "defaultValue": "Completed",
+            "groupName": "rolloutOptions",
+            "required": false,
+            "helpMarkDown": "Use this parameter to specify what should be done if there is a published submission currently in the process of a package rollout. You can choose to complete or rollback the rollout",
+            "options": {
+                "Completed": "Completed",
+                "Rolledback": "Rolledback"
+            },
+            "properties": {
+                "EditableOptions": "False"
+            },
+            "visibleRule": "createRollout = true"
+        },
+        {
+            "name": "isSeekEnabled",
+            "type": "boolean",
+            "label": "Enable Rollout Seek",
+            "defaultValue": true,
+            "groupName": "rolloutOptions",
+            "required": false,
+            "visibleRule": "createRollout = true",
+            "helpMarkDown": "Indicates whether you want to enable Seek in the rollout."
+        },
+        {
+            "name": "skipPolling",
+            "type": "boolean",
+            "label": "Skip polling",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check status of your submission in Dev Center."
+        },
+        {
+            "name": "deletePackages",
+            "type": "boolean",
+            "label": "Delete Packages",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Delete old redundant packages from the production/flight group."
+        },
+        {
+            "name": "numberOfPackagesToKeep",
+            "type": "pickList",
+            "label": "Number of Packages to keep",
+            "defaultValue": "2",
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Number of packages to keep per unique Target Device Family and Target Platform.",
+            "options": {
+                "0": "None",
+                "1": "1",
+                "2": "2",
+                "3": "3",
+                "4": "4",
+                "5": "5"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "deletePackages = true"
+        },
+        {
+            "name": "targetPublishMode",
+            "type": "pickList",
+            "label": "Target Publish Mode",
+            "defaultValue": "Default",
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "Indicates how the submission should be published. Default will use the same option the previous submission used. These options map those in the Publishing hold options in the store. Fore more information, see [here](https://docs.microsoft.com/en-us/windows/uwp/publish/manage-submission-options#publishing-hold-options). Setting this to any value other than Default will override the checkbox `Update Publish Mode And Visibility`. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way).",
+            "options": {
+                "Default": "Default",
+                "Manual": "Manual",
+                "Immediate": "Immediate",
+                "SpecificDate": "SpecificDate"
+            },
+            "properties": {
+                "EditableOptions": "False"
+            }
+        },
+        {
+            "name": "targetPublishDate",
+            "type": "string",
+            "label": "Target Publish Date",
+            "defaultValue": "",
+            "groupName": "advanced",
+            "helpMarkDown": "The specific date/time that the submission should be published. Using this value will override any value that might have been set by checkbox `Update Publish Mode And Visibility`. Users should provide this in local time and it will be converted automatically to UTC (e.g. 01/30/2019 00:00:00). [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way).",
+            "required": true,
+            "visibleRule": "targetPublishMode = SpecificDate"
+        },
+        {
+            "name": "Visibility",
+            "type": "pickList",
+            "label": "Visibility",
+            "defaultValue": "Default",
+            "required": true,
+            "helpMarkDown": "Indicates the store visibility of the app once the submission has been published. Setting this to any value other than `Default` will override the checkbox `Update Publish Mode And Visibility`. [More info](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#the-easy-way).",
+            "options": {
+                "Default": "Default",
+                "Public": "Public",
+                "Private": "Private",
+                "StopSelling": "StopSelling"
+            },
+            "properties": {
+                "EditableOptions": "False"
+            },
+            "visibleRule" : "releaseTrack = Production"
+        },
+        {
+            "name": "isMandatoryUpdate",
+            "type": "boolean",
+            "label": "Mandatory Update",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Indicates whether you want to treat the packages in this submission as mandatory for self-installing app updates."
+        },
+        {
+            "name": "mandatoryUpdateDifferHours",
+            "type": "pickList",
+            "label": "The number of hours until packages become mandatory",
+            "defaultValue": "2",
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "The effective time when the packages in this submission become mandatory, in hours from submission time.",
+            "options": {
+                "2": "2",
+                "6": "6",
+                "12": "12",
+                "24": "24",
+                "48": "48"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "isMandatoryUpdate = true"
+        },
+        {
+            "name": "preserveSubmissionId",
+            "type": "boolean",
+            "label": "Preserve Submission ID",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "This task will always preserve the Id of the new submission for future tasks in the same job to consume. By checking this, the task will also preserve the ID at the release level. This could be useful on auto-retry scenarios. [More info](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/README.md)"
+        },
+        {
+            "name": "logPath",
+            "type": "string",
+            "label": "Log Path",
+            "defaultValue": "$(System.DefaultWorkingDirectory)\\SBLog.txt",
+            "required": false,
+            "groupName": "advanced",
+            "helpMarkDown": "The full path for the Store Broker log file"
+        },
+        {
+            "name": "disableTelemetry",
+            "type": "boolean",
+            "label": "Disable Telemetry",
+            "defaultValue": false,
+            "groupName": "advanced",
+            "required": false,
+            "helpMarkDown": "Whether to disable or not the collection of data. See Microsoft's [Privacy Policy](https://privacy.microsoft.com/en-US/privacystatement) and [Terms of Use](https://www.microsoft.com/en-us/legal/intellectualproperty/copyright/default.aspx). For specific information on Store Broker's telemetry, see [Store Broker Telemetry](https://github.com/Microsoft/StoreBroker/blob/v2/Documentation/USAGE.md#telemetry)"
+        }
+    ],
+    "OutputVariables": [{
+        "name" : "WS_SubmissionId",
+        "description" : "The submission Id of the most recent submission created by this task."
+    }],
+    "execution": {
+        "PowerShell3": {
+            "target": "$(currentDirectory)\\publishUi.ps1",
+            "argumentFormat": "",
+            "workingDirectory": "$(currentDirectory)"
+        }
+    }
+}

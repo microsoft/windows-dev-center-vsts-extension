@@ -1,16 +1,14 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "0.9.36",
+    "version": "2.4.23",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
     "categories": [
         "Azure Pipelines"
     ],
-    "galleryFlags": [
-        "Public"
-    ],
+    "galleryFlags": [],
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
@@ -32,10 +30,34 @@
     },
     "files": [
         {
-            "path": "store-publish"
+            "path": "store-flight\\store-flight-V1"
         },
         {
-            "path": "store-flight"
+            "path": "store-flight\\store-flight-V2"
+        },
+        {
+            "path": "store-flight\\store-flight-V3"
+        },
+        {
+            "path": "store-publish\\store-publish-V1"
+        },
+        {
+            "path": "store-publish\\store-publish-V2"
+        },
+        {
+            "path": "store-publish\\store-publish-V3"
+        },
+        {
+            "path": "store-rollout\\store-rollout-V2"
+        },
+        {
+            "path": "store-rollout\\store-rollout-V3"
+        },
+        {
+            "path": "store-package\\store-package-V2"
+        },
+        {
+            "path": "store-package\\store-package-V3"
         },
         {
             "path": "docs",
@@ -77,7 +99,7 @@
             ],
             "properties": {
                 "name": "devCenter",
-                "displayName": "Windows Dev Center",
+                "displayName": "Windows Dev Center V1",
                 "url": "https://manage.devcenter.microsoft.com",
                 "inputDescriptors": [],
                 "authenticationSchemes": [
@@ -139,6 +161,128 @@
             }
         },
         {
+            "id": "devCenterApiEndpoint-V2",
+            "description": "DevCenterEndpointV2",
+            "type": "ms.vss-endpoint.service-endpoint-type",
+            "targets": [
+                "ms.vss-endpoint.endpoint-types"
+            ],
+            "properties": {
+                "name": "devCenter-V2",
+                "displayName": "Windows Dev Center V2",
+                "url": {
+                    "displayName": "Server Url",
+                    "value": "https://manage.devcenter.microsoft.com",
+                    "isVisible": "false",
+                    "helpText": ""
+                },
+                "inputDescriptors": [ ],
+                "authenticationSchemes": [
+                    {
+                        "displayName": "Azure Client ID and Secret",
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-basic", 
+                        "inputDescriptors": [
+                            {
+                                "id": "tenantIdPassword",
+                                "name": "Azure tenant ID",
+                                "description": "ID of the Azure tenant",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "guid",
+                                    "maxLength": 38
+                                }
+                            },
+                            {
+                                "id": "username",
+                                "name": "Client ID",
+                                "description": "ID of the client",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "guid",
+                                    "maxLength": 38
+                                }
+                            },
+                            {
+                                "id": "password",
+                                "name": "Client secret",
+                                "description": "Secret of the client",
+                                "inputMode": "passwordbox",
+                                "isConfidential": true,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "displayName": "Proxy - Tenant Id",
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-none",
+                        "inputDescriptors": [
+                            {
+                                "id": "tenantIdProxy",
+                                "name": "Azure tenant ID",
+                                "description": "ID of the Azure tenant",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "guid",
+                                    "maxLength": 38
+                                }
+                            },
+                            {
+                              "id": "proxyUrlTenantId",
+                              "name": "Proxy URL",
+                              "description": "Specify the proxy endpoint url",
+                              "inputMode": "textbox",
+                              "isConfidential": false,
+                              "validation": {
+                                "isRequired": true,
+                                "dataType": "string",
+                                "maxLength": 255
+                              }
+                            }
+                        ]
+                    },
+                    {
+                        "displayName": "Proxy - Tenant Name",
+                        "type": "ms.vss-endpoint.endpoint-auth-scheme-token",
+                        "inputDescriptors": [
+                            {
+                                "id": "apitoken",
+                                "name": "Azure tenant friendly name",
+                                "description": "Friendly name of the Azure tenant as configured in your proxy.",
+                                "inputMode": "textbox",
+                                "isConfidential": false,
+                                "validation": {
+                                    "isRequired": true,
+                                    "dataType": "string",
+                                    "maxLength": 255
+                                }
+                            },
+                            {
+                              "id": "proxyUrlTenantName",
+                              "name": "Proxy URL",
+                              "description": "Specify the proxy endpoint url",
+                              "inputMode": "textbox",
+                              "isConfidential": false,
+                              "validation": {
+                                "isRequired": true,
+                                "dataType": "string",
+                                "maxLength": 255
+                              }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             "id": "publish-task",
             "type": "ms.vss-distributed-task.task",
             "targets": [
@@ -156,6 +300,26 @@
             ],
             "properties": {
                 "name": "store-flight"
+            }
+        },
+        {
+            "id": "rollout-task-V2",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "store-rollout"
+            }
+        },
+        {
+            "id": "package-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "store-package"
             }
         }
     ]

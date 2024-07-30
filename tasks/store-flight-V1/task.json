@@ -1,8 +1,8 @@
 ﻿{
-    "id": "8e70da9d-532d-4416-a07f-5ec10f84339f",
-    "name": "store-publish",
-    "friendlyName": "Windows Store - Publish",
-    "description": "Publish your app to the Windows Store",
+    "id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc",
+    "name": "store-flight",
+    "friendlyName": "Windows Store - Flight V1",
+    "description": "Make a flight submission to the Windows Store",
     "author": "Microsoft Corporation",
     "category": "Deploy",
     "visibility": [
@@ -14,11 +14,11 @@
     ],
     "version": {
         "Major": "0",
-        "Minor": "10",
-        "Patch": "32"
+        "Minor": "2",
+        "Patch": "26"
     },
     "minimumAgentVersion": "2.144.0",
-    "instanceNameFormat": "Publish $(packagePath)",
+    "instanceNameFormat": "Flight $(packagePath) to $(flightName)",
     "groups": [
         {
             "name": "advanced",
@@ -65,33 +65,12 @@
             "visibleRule": "nameType = AppName"
         },
         {
-            "name": "metadataUpdateMethod",
-            "type": "pickList",
-            "label": "Metadata update method",
-            "defaultValue": "NoUpdate",
-            "options": {
-                "NoUpdate": "No update",
-                "JsonMetadata": "JSON-formatted metadata",
-                "TextMetadata":  "Text metadata"
-            }
-        },
-        {
-            "name": "metadataPath",
-            "type": "filePath",
-            "label": "Metadata root folder",
+            "name": "flightName",
+            "type": "string",
+            "label": "Flight name",
             "defaultValue": "",
-            "helpMarkDown": "Path to a directory containing the metadata. Consult the documentation for the expected format.",
             "required": true,
-            "visibleRule": "metadataUpdateMethod != NoUpdate"
-        },
-        {
-            "name": "updateImages",
-            "type": "boolean",
-            "label": "Update images",
-            "defaultValue": false,
-            "helpMarkDown": "Whether images should also be updated. **Warning**: if you check this box, all the old images of the listings you provide will be deleted.",
-            "required": true,
-            "visibleRule": "metadataUpdateMethod != NoUpdate"
+            "helpMarkDown": "Name of the flight as seen on the Dev Center"
         },
         {
             "name": "packagePath",
@@ -99,7 +78,7 @@
             "label": "Package file",
             "defaultValue": "",
             "required": false,
-            "helpMarkDown": "Path to the application's package. Minimatch pattern is supported."
+            "helpMarkDown": "Path to the application's package you want to flight. Minimatch pattern is supported."
         },
         {
             "name": "force",
@@ -124,7 +103,7 @@
             "defaultValue": false,
             "groupName": "advanced",
             "required": true,
-            "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check status of your submission in Dev Center."
+            "helpMarkDown": "Skip polling submission after committing it to Dev Center. **Warning**: if you check this box, you will not see errors, if any, that your submission may run into. You will have to manually check the status of your submission in Dev Center."
         },
         {
             "name": "deletePackages",
@@ -133,7 +112,7 @@
             "defaultValue": false,
             "groupName": "advanced",
             "required": false,
-            "helpMarkDown": "Delete old unnecessary packages from the production group."
+            "helpMarkDown": "Delete old unnecessary packages from the flight group you are submitting to."
         },
         {
             "name": "numberOfPackagesToKeep",
@@ -188,15 +167,15 @@
     ],
     "execution": {
         "Node": {
-            "target": "local/publishUi.js",
+            "target": "local/flightUi.js",
             "argumentFormat": ""
         },
         "Node10": {
-            "target": "local/publishUi.js",
+            "target": "local/flightUi.js",
             "argumentFormat": ""
         },
         "Node16": {
-            "target": "local/publishUi.js",
+            "target": "local/flightUi.js",
             "argumentFormat": ""
         }
     }
