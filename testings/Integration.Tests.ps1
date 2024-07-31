@@ -12,13 +12,13 @@ Set-Variable -Name "StoreBrokerLogPath" -Value "$PSScriptRoot\..\sblogs\sblogs.t
 
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($StoreBrokerLogPath))
 
-Import-Module "$PSScriptRoot\..\tasks\store-publish-V2\publish.psm1" 6>$null 5>$null 4>$null 3>$null 1>$null
+Import-Module "$PSScriptRoot\..\tasks\store-publish-V3\publish.psm1" 6>$null 5>$null 4>$null 3>$null 1>$null
 Import-Module $StoreBrokerPath 6>$null 5>$null 4>$null 3>$null 1>$null
 Import-Module $StoreBrokerHelperPath 6>$null 5>$null 4>$null 3>$null 1>$null
 Import-Module $VstsHelperPath 6>$null 5>$null 4>$null 3>$null 1>$null
 Import-Module $CommonHelperPath 6>$null 5>$null 4>$null 3>$null 1>$null
 Import-Module "$PSScriptRoot\..\lib\ps_modules\VstsTaskSdk\VstsTaskSdk.psm1" 6>$null 5>$null 4>$null 3>$null 1>$null
-Import-Module "$PSScriptRoot\..\tasks\store-rollout-V2\rollout.psm1" 6>$null 5>$null 4>$null 3>$null 1>$null
+Import-Module "$PSScriptRoot\..\tasks\store-rollout-V3\rollout.psm1" 6>$null 5>$null 4>$null 3>$null 1>$null
 
 $EndPointObj = @{
     'Auth' = @{

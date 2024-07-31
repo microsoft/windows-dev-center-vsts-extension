@@ -1,5 +1,5 @@
 Import-Module "$PSScriptRoot\..\lib\ps_modules\StoreBroker\StoreBroker"
-Import-Module "$PSScriptRoot\..\tasks\store-publish-V2\publish.psm1"
+Import-Module "$PSScriptRoot\..\tasks\store-publish-V3\publish.psm1"
 
 if (-not (Get-Module -ListAvailable -Name SomeModule)) {
     Install-Module -Name PesterMatchHashtable

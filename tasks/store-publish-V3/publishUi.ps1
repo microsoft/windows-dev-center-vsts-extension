@@ -82,7 +82,15 @@ try
     # Getting AAD accessToken that would be later used by all the StoreBroker commands to access Partner Center APIs.
     Initialize-AdoAzureHelper -msalLibraryPath $NugetPath -adoApiLibraryPath $NugetPath -openSSLExePath "$OpenSSLPath\openssl.exe"
     $resource = "https://api.partner.microsoft.com"
-    $aadAccessToken = (Get-AzureRMAccessToken $endPointObj $endpointId $resource).access_token
+
+    $sendX5C = $false
+    $useMSAL = $true
+    if ($endPointObj.Auth.Parameters.AuthenticationType -eq 'SPNCertificate')
+    {
+        $sendX5C = $true
+    }
+
+    $aadAccessToken = (Get-AzureRMAccessToken $endPointObj $endpointId $resource $sendX5C $useMSAL).access_token
 
     $commonParams = @{
         'AppId' = $appId

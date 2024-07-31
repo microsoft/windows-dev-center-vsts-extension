@@ -90,12 +90,12 @@ gulp.task('get_ado_azurehelper_sdk', function(gulpCallBack) {
 
 gulp.task('move_ado_azurehelper_sdk', gulp.series('get_ado_azurehelper_sdk', function() {
     var VstsSdkPath = __dirname + "/lib/ps_modules/AdoAzureHelper"
-    return gulp.src([VstsSdkPath + "/1.0.11/**/*"])
+    return gulp.src([VstsSdkPath + "/1.0.12/**/*"])
         .pipe(gulp.dest(VstsSdkPath));
 }));
 
 gulp.task('remove_version_folder', gulp.series(gulp.series('move_vsts_task_sdk', 'move_ado_azurehelper_sdk'), function() {
-    return del([__dirname + '/lib/ps_modules/VstsTaskSdk/0.21.0', __dirname + '/lib/ps_modules/AdoAzureHelper/1.0.11']);
+    return del([__dirname + '/lib/ps_modules/VstsTaskSdk/0.21.0', __dirname + '/lib/ps_modules/AdoAzureHelper/1.0.12']);
 }));
 
 gulp.task('get_storebroker', function(done) {
@@ -156,27 +156,27 @@ gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
   |   \- publishUi.ts               |  |   \- common 
   |   \- task.json                  |  |   |    \- common.js
   |                                 |  |   |    \- util.js
-  \- store-publish-V2               |  |   |
+  \- store-publish-V3               |  |   |
   |   \- publish.psm1               |  |   \- local
   |   \- publishUi.ps1              |  |   |    \- publish.js
   |   \- task.json                  |  |   |    \- publishUi.js
   |                                 |  |   \- task.json 
-  \- store-flight                   |  \- store-publish-V2
+  \- store-flight                   |  \- store-publish-V3
   |   \- flight.ts                  |  |   \- ps_common
   |   \- flightUi.ts                |  |   |    \- storeBrokerHelper.psm1
   |   \- task.json                  |  |   \- ps_modules
   |                                 |  |   \- publish.psm1
-  \- store-rollout-V2               |  |   \- publishUi.ps1
+  \- store-rollout-V3               |  |   \- publishUi.ps1
   |   \- rollout.psm1               |  |   \- task.json    
   |   \- rolloutUi.ps1              \- store-flight          
   |   \- task.json                  |  \- store-flight-V1
   |                                 |      \....
-  \- store-package-V2               |  \- store-flight-V2
+  \- store-package-V3               |  \- store-flight-V3
   |   \-packageUI.ps1               |      \....
-  |   \- task.json                  \- store-rollout-V2
+  |   \- task.json                  \- store-rollout-V3
   |   \...                          |   \....
   |                                 |
-  \- ps_common                      \- store-package-V2
+  \- ps_common                      \- store-package-V3
   |   \- storeBrokerHelper.psm1     |   \....
   |
   |- common
@@ -232,10 +232,6 @@ gulp.task('_remove_common', function() {
 gulp.task('_copy_ps_common', function() {
     var copy_ps_common = gulp
         .src(['tasks/ps_common/**'])
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V2', PS_COMMON_TASK_DIR)))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V2', PS_COMMON_TASK_DIR)))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V2', PS_COMMON_TASK_DIR)))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V2', PS_COMMON_TASK_DIR)))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V3', PS_COMMON_TASK_DIR)))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V3', PS_COMMON_TASK_DIR)))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V3', PS_COMMON_TASK_DIR)))
@@ -246,41 +242,24 @@ gulp.task('_copy_ps_common', function() {
 
 gulp.task('_copy_ps', function() {
     var copyRolloutTask = gulp
-        .src(['tasks/store-rollout-V2/*.ps1', 'tasks/store-rollout-V2/*.psm1'])
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V2')));
-
-    var copyRolloutTaskV3 = gulp
         .src(['tasks/store-rollout-V3/*.ps1', 'tasks/store-rollout-V3/*.psm1'])
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V3')));
 
     var copyPackageTask = gulp
-        .src(['tasks/store-package-V2/*.ps1'])
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V2')));
-
-    var copyPackageTaskV3 = gulp
         .src(['tasks/store-package-V3/*.ps1'])
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V3')));
-    
-    var copyPublishTask = gulp
-        .src(['tasks/store-publish-V2/*.ps1', 'tasks/store-publish-V2/*.psm1'])
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V2')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V2')));
 
-    var copyPublishTaskV3 = gulp
+    var copyPublishTask = gulp
         .src(['tasks/store-publish-V3/*.ps1', 'tasks/store-publish-V3/*.psm1'])
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V3')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V3')));
 
-    return merge(copyRolloutTask, copyRolloutTaskV3, copyPackageTask, copyPackageTaskV3, copyPublishTask, copyPublishTaskV3);
+    return merge(copyRolloutTask, copyPackageTask, copyPublishTask);
 });
 
 gulp.task('_copy_lib', gulp.series('_copy_ps', function() {
     return gulp
         .src(['lib/**/*'])
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V2')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V2')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V2')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V2')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V3')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V3')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V3')))
@@ -308,19 +287,19 @@ gulp.task('dependencies', gulp.series('_copy_dependency_list', function () {
 
 gulp.task('_group_tasks', function() {
     var groupPublishTasks = gulp
-        .src([BUILD_DIR + '/store-publish-V1/**/*', BUILD_DIR + '/store-publish-V2/**/*',  BUILD_DIR + '/store-publish-V3/**/*'], { base: BUILD_DIR })
+        .src([BUILD_DIR + '/store-publish-V1/**/*', BUILD_DIR + '/store-publish-V3/**/*'], { base: BUILD_DIR })
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish')));
     
     var groupFlightTasks = gulp
-        .src([BUILD_DIR + '/store-flight-V1/**/*', BUILD_DIR + '/store-flight-V2/**/*', BUILD_DIR + '/store-flight-V3/**/*'], { base: BUILD_DIR })
+        .src([BUILD_DIR + '/store-flight-V1/**/*', BUILD_DIR + '/store-flight-V3/**/*'], { base: BUILD_DIR })
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight')));
 
     var groupRolloutTasks = gulp
-        .src([BUILD_DIR + '/store-rollout-V2/**/*', BUILD_DIR + '/store-rollout-V3/**/*'], { base: BUILD_DIR })
+        .src([BUILD_DIR + '/store-rollout-V3/**/*'], { base: BUILD_DIR })
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout')));
 
     var groupPackageTasks = gulp
-        .src([BUILD_DIR + '/store-package-V2/**/*', BUILD_DIR + '/store-package-V3/**/*'], { base: BUILD_DIR })
+        .src([BUILD_DIR + '/store-package-V3/**/*'], { base: BUILD_DIR })
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package')));
     
     return merge(groupPublishTasks, groupFlightTasks, groupRolloutTasks, groupPackageTasks);
@@ -335,15 +314,6 @@ gulp.task('_remove_tasks', gulp.series('_group_tasks', function() {
 
 gulp.task('_task_metadata', function () {
     // Copy over non-code files of the extension
-    var copyRolloutMetadata = gulp
-        .src(['tasks/store-rollout-V2/*.png'       // Task icons
-            , 'tasks/store-rollout-V2/task.json'   // Task manifest
-            ])
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('b278571a-a422-432c-873a-780b98240596','e3f06e65-081e-460d-ae29-5b84e425f8b4')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Rollout"','"friendlyName": "Windows Store - Rollout Dev"')))        
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter-V2"','"connectedService:devCenter-V2-dev"')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V2')));
-
     var copyRolloutV3Metadata = gulp
         .src(['tasks/store-rollout-V3/*.png'       // Task icons
             , 'tasks/store-rollout-V3/task.json'   // Task manifest
@@ -351,7 +321,7 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('b278571a-a422-432c-873a-780b98240596','e3f06e65-081e-460d-ae29-5b84e425f8b4')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Rollout V3"','"friendlyName": "Windows Store - Rollout V3 Dev"')))        
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-rollout-V3')));
-    
+
     var copyPublishV1Metadata = gulp
         .src(['tasks/store-publish-V1/*.png'       // Task icons
             , 'tasks/store-publish-V1/task.json'   // Task manifest
@@ -360,7 +330,7 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish V1"','"friendlyName": "Windows Store - Publish V1 Dev"')))        
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter"','"connectedService:devCenter-dev"')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V1')));
-    
+
     var copyFlightV1Metadata = gulp
         .src(['tasks/store-flight-V1/*.png'       // Task icons
             , 'tasks/store-flight-V1/task.json'   // Task manifest
@@ -369,22 +339,8 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight V1"','"friendlyName": "Windows Store - Flight V1 Dev"')))        
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter"','"connectedService:devCenter-dev"')))
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V1')));
-    
-    var copyPublishV2Metadata = gulp
-        .src(['tasks/store-publish-V2/*.png'       // Task icons
-            , 'tasks/store-publish-V2/task.json'   // Task manifest
-            ])
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"name": "TO_BE_SET"','"name": "store-publish"'))) 
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"id": "TO_BE_SET"','"id": "8e70da9d-532d-4416-a07f-5ec10f84339f"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"friendlyName": "TO_BE_SET"','"friendlyName": "Windows Store - Publish V2"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"defaultValue": "TO_BE_SET"','"defaultValue": "Production"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"description": "TO_BE_SET"','"description": "Publish your app to the Windows Store"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"id": "8e70da9d-532d-4416-a07f-5ec10f84339f"','"id": "81e53284-f02d-4878-abca-20f08327121c"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish V2"','"friendlyName": "Windows Store - Publish V2 Dev"')))        
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter-V2"','"connectedService:devCenter-V2-dev"')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V2')));
-    
-        var copyPublishV3Metadata = gulp
+
+    var copyPublishV3Metadata = gulp
         .src(['tasks/store-publish-V3/*.png'       // Task icons
             , 'tasks/store-publish-V3/task.json'   // Task manifest
             ])
@@ -396,20 +352,6 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"id": "8e70da9d-532d-4416-a07f-5ec10f84339f"','"id": "81e53284-f02d-4878-abca-20f08327121c"')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Publish V3"','"friendlyName": "Windows Store - Publish V3 Dev"')))        
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-publish-V3')));
-    
-    var copyFlightV2Metadata = gulp
-        .src(['tasks/store-publish-V2/*.png'       // Task icons
-            , 'tasks/store-publish-V2/task.json'   // Task manifest
-            ])
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"name": "TO_BE_SET"','"name": "store-flight"'))) 
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"id": "TO_BE_SET"','"id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"friendlyName": "TO_BE_SET"','"friendlyName": "Windows Store - Flight V2"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"defaultValue": "TO_BE_SET"','"defaultValue": "Flight"')))
-        .pipe(gulpif(function(file) { return file.path.match(/task\.json/); }, replace('"description": "TO_BE_SET"','"description": "Make a flight submission to the Windows Store"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"id": "13dee6a7-3698-4b12-bbb4-b393560a3ebc"','"id": "91c056be-bd43-4b3f-a4bf-6eb489bc121d"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight V2"','"friendlyName": "Windows Store - Flight V2 Dev"')))        
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter-V2"','"connectedService:devCenter-V2-dev"')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V2')));
 
     var copyFlightV3Metadata = gulp
         .src(['tasks/store-publish-V3/*.png'       // Task icons
@@ -424,15 +366,6 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Flight V3"','"friendlyName": "Windows Store - Flight V3 Dev"')))        
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-flight-V3')));
 
-    var copyPackageMetadata = gulp
-        .src(['tasks/store-package-V2/*.png'       // Task icons
-        , 'tasks/store-package-V2/task.json'   // Task manifest
-        ])
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('96d0c453-efe7-4c9b-8b0c-fde9a356a5cd','91973c55-0ce6-4779-9669-b63cc6adfed3')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Package"','"friendlyName": "Windows Store - Package Dev"')))        
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"connectedService:devCenter-V2"','"connectedService:devCenter-V2-dev"')))
-        .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V2')));
-
     var copyPackageV3Metadata = gulp
         .src(['tasks/store-package-V3/*.png'       // Task icons
         , 'tasks/store-package-V3/task.json'   // Task manifest
@@ -441,7 +374,7 @@ gulp.task('_task_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/task\.json/); }, replace('"friendlyName": "Windows Store - Package V3"','"friendlyName": "Windows Store - Package V3 Dev"')))        
         .pipe(gulp.dest(path.join(BUILD_DIR, 'store-package-V3')));
     
-    return merge(copyRolloutMetadata, copyRolloutV3Metadata, copyPublishV1Metadata, copyFlightV1Metadata, copyPublishV2Metadata, copyFlightV2Metadata, copyPublishV3Metadata, copyFlightV3Metadata, copyPackageMetadata, copyPackageV3Metadata);
+    return merge(copyRolloutV3Metadata, copyPublishV1Metadata, copyFlightV1Metadata, copyPublishV3Metadata, copyFlightV3Metadata, copyPackageV3Metadata);
 });
 
 gulp.task('_extension_metadata', function () {
@@ -456,9 +389,6 @@ gulp.task('_extension_metadata', function () {
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('devCenterApiEndpoint','devCenterApiEndpoint-dev')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"displayName": "Windows Dev Center V1"','"displayName": "Windows Dev Center V1 Dev"')))
         .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"name": "devCenter"','"name": "devCenter-dev"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('devCenterApiEndpoint-V2','devCenterApiEndpoint-V2-dev')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"displayName": "Windows Dev Center V2"','"displayName": "Windows Dev Center V2 Dev"')))
-        .pipe(gulpif(function(file) { return argv.dev && file.path.match(/vss-extension\.json/); }, replace('"name": "devCenter-V2"','"name": "devCenter-V2-dev"')))
         .pipe(gulp.dest(BUILD_DIR));
 });
 

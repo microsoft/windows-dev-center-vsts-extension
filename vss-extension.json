@@ -1,7 +1,7 @@
 ﻿{
     "manifestVersion": 1,
     "id": "windows-store-publish",
-    "version": "2.4.23",
+    "version": "2.4.24",
     "name": "Windows Store",
     "publisher": "ms-rdx-mro",
     "description": "Publish your applications on the Windows Store.",
@@ -33,28 +33,16 @@
             "path": "store-flight\\store-flight-V1"
         },
         {
-            "path": "store-flight\\store-flight-V2"
-        },
-        {
             "path": "store-flight\\store-flight-V3"
         },
         {
             "path": "store-publish\\store-publish-V1"
         },
         {
-            "path": "store-publish\\store-publish-V2"
-        },
-        {
             "path": "store-publish\\store-publish-V3"
         },
         {
-            "path": "store-rollout\\store-rollout-V2"
-        },
-        {
             "path": "store-rollout\\store-rollout-V3"
-        },
-        {
-            "path": "store-package\\store-package-V2"
         },
         {
             "path": "store-package\\store-package-V3"
