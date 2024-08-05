@@ -20,7 +20,7 @@ You must have an Azure Active Directory (AAD) and owner access of it. See [setup
     10. **Owners**: The aliases of appropriate owners for the domain registration. Note: You must use an aliases from production, such as your Torus account. e.g. prdtrs01\richwhi_debug
 4. Click Create Domain Registration
 
-## Create a KeyVault (for generating & renewing the certificate)
+## Step 2: Create a KeyVault (for generating & renewing the certificate)
 Please ensure that the Azure subscription matches the Domain Registration subscription ID above if one does not already exist.
 
 ## Step 3: Generate a certificate
