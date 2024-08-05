@@ -1,0 +1,62 @@
+parameters:
+- name: isProduction
+  type: boolean
+  default: true
+
+trigger:
+- releases/windowsdevcentervstsextension
+
+schedules:
+- cron: '0 8 * * *'
+  displayName: Daily Build
+  branches:
+    include:
+    - dev
+  always: true
+
+# Pull request triggers are not supported by ADO repos
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/troubleshooting/troubleshooting?view=azure-devops#pull-request-triggers-not-supported-with-azure-repos
+# Leave this section as is for demonstrating the syntax, or in case we migrate to a different repo.
+pr:
+- dev
+
+variables:
+- name: System.Debug
+  value: true
+- ${{ if parameters.isProduction }}:
+  - name: tags
+    value: production
+
+extends:
+  template: ./templates/OfficePipelineTemplateSettings.yml
+  parameters:
+    isProduction: ${{ parameters.isProduction }}
+    stages:
+    - stage:
+      jobs:
+      - job:
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            targetPath: $(Build.ArtifactStagingDirectory)
+            artifactName: drop
+        steps:
+        - script: npm install -g tfx-cli
+        - script: npm install -g typings
+        - task: Npm@1
+          inputs:
+            command: install
+            verbose: true
+        - script: typings install
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+            arguments: '--dev'
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+        - task: CopyFiles@2
+          inputs:
+            SourceFolder: build/extension
+            Contents: '*.vsix'
+            TargetFolder: '$(build.artifactstagingdirectory)'
