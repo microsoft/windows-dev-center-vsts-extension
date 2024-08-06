@@ -42,7 +42,6 @@ extends:
             artifactName: drop
         steps:
         - script: npm install -g tfx-cli
-        - script: npm install -g typings
         - task: Npm@1
           inputs:
             command: install
