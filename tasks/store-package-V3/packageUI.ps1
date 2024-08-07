@@ -46,14 +46,14 @@ try
     Set-StoreBrokerSettings -LogPath $logPath -NugetPath $NugetPath -DisableTelemetry $disableTelemetry -Verbose:$useVerbose
 
     # Getting AAD accessToken that would be later used by all the StoreBroker commands to access Partner Center APIs.
-    Initialize-AdoAzureHelper -msalLibraryPath $NugetPath -adoApiLibraryPath $NugetPath -openSSLExePath "$OpenSSLPath\openssl.exe"
+    Initialize-AdoAzureHelper -msalLibraryDir $NugetPath -adoApiLibraryDir $NugetPath -openSSLExeDir "$OpenSSLPath\openssl.exe"
     $resource = "https://api.partner.microsoft.com"
 
-    $sendX5C = $false
+    $sendX5C = $true
     $useMSAL = $true
-    if ($endPointObj.Auth.Parameters.AuthenticationType -eq 'SPNCertificate')
+    if (($endPointObj.Auth.Scheme -eq 'WorkloadIdentityFederation') -or ($endPointObj.Auth.Parameters.AuthenticationType -ne 'SPNCertificate'))
     {
-        $sendX5C = $true
+        $sendX5C = $false
     }
 
     $aadAccessToken = (Get-AzureRMAccessToken $endPointObj $endpointId $resource $sendX5C $useMSAL).access_token

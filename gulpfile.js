@@ -73,7 +73,7 @@ gulp.task('move_vsts_task_sdk', gulp.series('get_vsts_task_sdk', function() {
 }));
 
 gulp.task('get_ado_azurehelper_sdk', function(gulpCallBack) {
-    child = spawn("powershell.exe", ["Save-Module -Name AdoAzureHelper -Path ./lib/ps_modules -RequiredVersion 1.0.11"]);
+    child = spawn("powershell.exe", ["Save-Module -Name AdoAzureHelper -Path ./lib/ps_modules -RequiredVersion 1.0.12"]);
 
     child.stdout.on("data",function(data){
         console.log(data.toString());
