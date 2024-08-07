@@ -3,3 +3,11 @@ build/**
 typings/**
 .vscode/**
 **/.taskkey
+lib/**
+.vs
+.vs/**
+.vscode/
+nuget.exe
+packages/**
+sblogs/**
+test.js

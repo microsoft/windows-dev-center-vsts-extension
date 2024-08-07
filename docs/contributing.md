@@ -1,16 +1,15 @@
 # Visual Studio Team Services extension for the Windows Store
 
-## For general documentation about the extension, visit the [marketplace]
-(https://marketplace.visualstudio.com/items?itemName=MS-RDX-MRO.windows-store-publish)
+## For general documentation about the extension, visit the [marketplace](https://marketplace.visualstudio.com/items?itemName=MS-RDX-MRO.windows-store-publish)
 
+***
 ## Guidelines for opening issues
 
 In all cases, make sure to search the list of issues before opening a new one. Duplicate issues will be closed.
 
 ### 1. Questions
 
-You should only open an issue to report a bug or make a suggestion. If you have questions about the way the
-extension work, please [send us an email](mailto:wdcrsppt@microsoft.com).
+You should open an issue if you have questions about the way the extension work, to report a bug or make a suggestion.
 
 ### 2. Bugs
 
@@ -34,6 +33,7 @@ effectively, try to be as detailed as possible and include:
 
 Please also mark your issue with the 'suggestion' label.
 
+***
 ## Guidelines for contributing code
 
 We welcome all pull requests. To maximize your chances of being accepted, your pull request should include a clear
@@ -41,12 +41,13 @@ description of your changes, and your commits should have descriptive messages a
 
 ### Developer prerequisites and tools
 
-In order to be able to build and contribute code, you will need [node.js](https://nodejs.org) and (npm)
-[https://npmjs.com] (bundled with node).
+In order to be able to build and contribute code, you will need [node.js](https://nodejs.org) and (npm)[https://npmjs.com] (bundled with node).
 
-This project is written in [TypeScript](https://www.typescriptlang.org/) and uses [Gulp](http://gulpjs.com/) for the
-build system. They are marked as dev dependencies so you do not need to install them separately, but you should be
-familiar with them.
+This project is written in [TypeScript](https://www.typescriptlang.org/) (v0.\*) and [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/powershell-scripting?view=powershell-3.0) (v2.\*),
+and uses [Gulp](http://gulpjs.com/) for the build system.
+
+Building this extension will bring all necessary dependencies for you, you can read more about 
+other ways to install dependencies in [Dependencies](./lib/ps_modules/DEPENDENCIES.MD).
 
 ### How to build
 
@@ -54,17 +55,19 @@ familiar with them.
 2. ```cd $winstore-extension```
 3. ```npm install```
 4. ```typings install```
-4. ```gulp```
+5. ```gulp```
 
-Consult [gulp.js](./gulp.js) for more build options.
+Run ```gulp --tasks``` or consult [gulp.js](./gulp.js) for more build options.
 
-### Code of conduct
+***
+## Code of conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact
 [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-### Legal
+***
+## Legal
 
 You will need to complete a Contributor License Agreement (CLA). Briefly, this agreement testifies that you are granting
 us permission to use the submitted change according to the terms of the project's license, and that the work being

@@ -1,7 +1,7 @@
 ﻿{
     "id": "8e70da9d-532d-4416-a07f-5ec10f84339f",
     "name": "store-publish",
-    "friendlyName": "Windows Store - Publish",
+    "friendlyName": "Windows Store - Publish V1",
     "description": "Publish your app to the Windows Store",
     "author": "Microsoft Corporation",
     "category": "Deploy",
@@ -31,7 +31,7 @@
             "name": "serviceEndpoint",
             "type": "connectedService:devCenter",
             "label": "Service endpoint",
-            "defaultValue": "",
+            "defaultValue": "TO_BE_SET",
             "required": true,
             "helpMarkDown": "Windows Developer Center endpoint configured with your credentials"
         },
@@ -171,7 +171,7 @@
             "label": "The number of hours until packages become mandatory",
             "defaultValue": "2",
             "groupName": "advanced",
-            "required": false,
+            "required": true,
             "helpMarkDown": "The effective time when the packages in this submission become mandatory, in hours from submission time.",
             "options": {
                 "2": "2",

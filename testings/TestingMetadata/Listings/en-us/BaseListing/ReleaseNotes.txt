@@ -1,0 +1,7 @@
+﻿•	Feature 1: This is the description of the feature.
+•	Feature 2: This is the description of the feature.
+•	Feature 3: This is the description of the feature.
+•	Feature 4: This is the description of the feature.
+•	Feature 5: This is the description of the feature.
+•	Feature 6: This is the description of the feature.
+•	Feature 7: This is the description of the feature.
