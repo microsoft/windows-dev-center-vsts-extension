@@ -1,0 +1,234 @@
+{
+    "id": "b278571a-a422-432c-873a-780b98240596",
+    "name": "store-rollout-V2",
+    "friendlyName": "Windows Store - Rollout V3",
+    "description": "Update rollout in the Windows Store",
+    "author": "Microsoft Corporation",
+    "helpMarkDown": "Visit our GitHub repository for help on usage for the [rollout task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---rollout)",
+    "category": "Deploy",
+    "visibility": [
+        "Build",
+        "Release"
+    ],
+    "demands": [
+        "DotNetFramework"
+    ],
+    "version": {
+        "Major": "3",
+        "Minor": "0",
+        "Patch": "21"
+    },
+    "minimumAgentVersion": "2.117.0",
+    "instanceNameFormat": "Rollout $(appName)",
+    "groups": [
+        {
+            "name": "advanced",
+            "displayName": "Advanced Options",
+            "isExpanded": false
+        }
+    ],
+    "inputs": [
+        {
+            "name": "serviceEndpoint",
+            "type": "connectedService:azureRM",
+            "label": "Service endpoint",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials"
+        },
+        {
+            "name": "appNameType",
+            "type": "pickList",
+            "label": "App identification method",
+            "helpMarkDown": "How to determine the app to publish",
+            "defaultValue": "AppId",
+            "options": {
+                "AppId": "ID",
+                "AppName": "Primary name"
+            }
+        },
+        {
+            "name": "appId",
+            "type": "string",
+            "label": "Application ID",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the application, found in the URL for the application's page on the Dev Center",
+            "visibleRule": "appNameType = AppId"
+        },
+        {
+            "name": "appName",
+            "type": "string",
+            "label": "Application primary name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Primary name of the application, found at the top of the application's page on the Dev Center",
+            "visibleRule": "appNameType = AppName"
+        },
+        {
+            "name": "releaseTrack",
+            "type": "pickList",
+            "label": "Track",
+            "defaultValue": "Flight",
+            "helpMarkDown": "",
+            "options": {
+                "Production": "Production",
+                "Flight": "Flight"
+            }
+        },
+        {
+            "name": "flightNameType",
+            "type": "pickList",
+            "label": "Flight identification method",
+            "helpMarkDown": "How to determine the flight to publish to",
+            "defaultValue": "FlightId",
+            "options": {
+                "FlightId": "ID",
+                "FlightName": "Primary name"
+            },
+            "visibleRule": "releaseTrack == Flight"
+        },
+        {
+            "name": "flightId",
+            "type": "string",
+            "label": "Flight name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "ID of the flight as seen on the Dev Center",
+            "visibleRule": "releaseTrack == Flight && flightNameType == FlightId"
+        },
+        {
+            "name": "flightName",
+            "type": "string",
+            "label": "Flight name",
+            "defaultValue": "",
+            "required": true,
+            "helpMarkDown": "Name of the flight as seen on the Dev Center",
+            "visibleRule": "releaseTrack == Flight && flightNameType == FlightName"
+        },
+        {
+            "name": "rolloutAction",
+            "type": "radio",
+            "label": "Rollout Action",
+            "defaultValue": "set",
+            "required": true,
+            "helpMarkDown": "Will adjust the current gradual rollout percentage to the provided percentage",
+            "options": {
+                "finalize": "Finalize",
+                "halt": "Halt",
+                "set": "Set"
+            }
+        },
+        {
+            "name": "rollout",
+            "type": "pickList",
+            "label": "Rollout Value",
+            "defaultValue": "0.0",
+            "required": true,
+            "helpMarkDown": "Choose rollout percentage value. Valid values are (0.0 - 100.0) exclusive",
+            "options": {
+                "0.1": "0.1",
+                "0.5": "0.5",
+                "1.0": "1",
+                "5.0": "5",
+                "10.0": "10",
+                "20.0": "20",
+                "40.0": "40",
+                "60.0": "60",
+                "80.0": "80",
+                "99.99": "99.99"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "rolloutAction = set"
+        },
+        {
+            "name": "rolloutActionThreshold",
+            "type": "pickList",
+            "label": "Execute the action only if the current rollout is less than",
+            "defaultValue": "100.0",
+            "required": true,
+            "helpMarkDown": "Finalize Context:  Execute the action only if the current percentage is less than the provided percentage.  Else Halt.\r\n. Halt Context:  Execute the action only if the current percentage is less than the provided percentage.  Else Finalize.\r\n Valid values are [0.0 - 100.0] inclusive.",
+            "options": {
+                "0.0": "0",
+                "0.1": "0.1",
+                "0.5": "0.5",
+                "1.0": "1",
+                "5.0": "5",
+                "10.0": "10",
+                "20.0": "20",
+                "40.0": "40",
+                "60.0": "60",
+                "80.0": "80",
+                "100.0": "100"
+            },
+            "properties": {
+                "EditableOptions": "True"
+            },
+            "visibleRule": "rolloutAction = finalize || rolloutAction = halt"
+        },
+        {
+            "name": "currentPackageVersionRegex",
+            "type": "string",
+            "label": "Current Package Version Regex",
+            "defaultValue": ".*",
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "Regex representing current package version. Rollout will be done, only if package version in existing rollout in Dev Center matches this regex."
+        },
+        {
+            "name": "skipIfNoMatch",
+            "type": "boolean",
+            "label": "Skip if current packages do not match regex",
+            "defaultValue": "false",
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "If checked, the task will be skipped instead of failing when at least one package does not match the Current Package Version Regex"
+        },
+        {
+            "name": "failIfNoRollout",
+            "type": "boolean",
+            "label": "Fail if rollout is not in progress",
+            "defaultValue": "true",
+            "groupName": "advanced",
+            "required": true,
+            "helpMarkDown": "If checked, this task will fail if no in-progress rollout is found in Dev Center for given app and track."
+        },
+        {
+            "name": "logPath",
+            "type": "string",
+            "label": "Log Path",
+            "defaultValue": "$(System.DefaultWorkingDirectory)\\SBLog.txt",
+            "required": false,
+            "groupName": "advanced",
+            "helpMarkDown": "Specify the full path for the Store Broker log file"
+        },
+        {
+            "name": "disableTelemetry",
+            "type": "boolean",
+            "label": "Disable Telemetry",
+            "defaultValue": false,
+            "required": false,
+            "groupName": "advanced",
+            "helpMarkDown": "Whether to disable the telemetry or not"
+        }
+    ],
+    "OutputVariables": [
+        {
+            "name" : "Existing_Rollout_Package_Version",
+            "description" : "The version of the first package found in the existing submission."
+        },
+        {
+            "name" : "Updated_Rollout_Value",
+            "description" : "The rollout value set by this task."
+        }
+    ],
+    "execution": {
+        "PowerShell3": {
+            "target": "$(currentDirectory)\\rolloutUi.ps1",
+            "argumentFormat": "",
+            "workingDirectory": "$(currentDirectory)"
+        }
+    }
+}

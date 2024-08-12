@@ -1,0 +1,16 @@
+{
+    "description":  "This is a NodeJS based VSTS extension for releasing app packages to Universal Store.",
+    "schema":  {
+                   "office":  "1.0.0"
+               },
+    "deployedToProduction":  false,
+    "complianceTypes":  [
+
+                        ],
+    "inventoryId":  [
+
+                    ],
+    "contacts":  [
+                     "kupatil@microsoft.com"
+                 ]
+}

@@ -12,7 +12,7 @@ var JSZip = require('jszip'); // JSZip typings have not been updated to the vers
 import Q = require('q');
 import stream = require('stream');
 import tl = require('azure-pipelines-task-lib');
-import { AnonymousCredential, BlobServiceClient, BlockBlobClient } from '@azure/storage-blob';
+import { AnonymousCredential, BlockBlobClient } from '@azure/storage-blob';
 var azure = require('@azure/storage-blob');
 var url = require('url');
 

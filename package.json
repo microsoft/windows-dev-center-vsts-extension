@@ -9,14 +9,16 @@
     "url": "https://github.com/Microsoft/windows-dev-center-vsts-extension"
   },
   "dependencies": {
-    "azure-pipelines-task-lib": "^4.0.2",
     "@azure/storage-blob": "^12.17.0",
     "glob": "^7.0.3",
+    "gulp-git": "^2.10.1",
+    "gulp-nuget": "^1.3.0",
     "jszip": "^3.1.1",
     "q": "^1.4.1",
-    "request": "^2.72.0",
-    "url": "^0.11.3",
-    "uuid": "^9.0.1"
+    "request": "^2.88.0",
+    "url": "^0.11.0",
+    "uuid": "^9.0.1",
+    "azure-pipelines-task-lib": "^4.0.2"
   },
   "devDependencies": {
     "@types/node": "^12.6.1",
@@ -24,6 +26,8 @@
     "@types/request": "^2.48.1",
     "del": "^5.0.0",
     "gulp": "^4.0.2",
+    "gulp-download": "^0.0.1",
+    "gulp-decompress": "^3.0.0",
     "gulp-exec": "^3.0.2",
     "gulp-if": "^2.0.2",
     "gulp-multi-dest": "^1.3.7",
