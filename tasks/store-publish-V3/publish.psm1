@@ -266,7 +266,7 @@ function Start-Publishing
         else
         {
             Write-Verbose "Source Folder of packages: $SourceFolder"
-            $submissionJson = @{
+            $submissionJson = [PSCustomObject]@{
                 'ProductId' = $productId
                 'ApplicationPackages' = (Get-SubmissionPackages -SourceFolder $SourceFolder -Contents $Contents)
             }
@@ -274,7 +274,7 @@ function Start-Publishing
             Write-Verbose "Metadata update type: $MetadataUpdateMethod"
             if ($ReleaseTrack -eq 'Flight' -or $MetadataUpdateMethod -eq 'NoUpdate')
             {
-                $submissionJson.listings = @{}
+                $submissionJson.listings = [PSCustomObject]@{}
                 $submissionParameters['JsonObject'] = [PSCustomObject]$submissionJson
                 $submissionParameters['PackageRootPath'] = $SourceFolder
                 $submissionParameters['MediaRootPath'] = $SourceFolder
@@ -521,7 +521,7 @@ function Update-MetadataListings
 
     Write-Verbose "Metadata Folder path: $MetadataSource"
     Write-Verbose "Update images and captions: $UpdateImagesAndCaptions"
-    $listingsMap = @{}
+    $listingsMap = [PSCustomObject]@{}
     $listingSource = [IO.Path]::Combine($MetadataSource, "Listings")
 
     Write-Verbose "Getting listings from $listingSource"
@@ -546,7 +546,7 @@ function Update-MetadataListings
             Update-ImageListings -ListingAbsPath $listingAbsPath -ListingAttributes $listingAttributes -MetadataSource $MetadataSource
         }
         $listingAttributes.baseListing = [PSCustomObject] $listingAttributes.baseListing
-        $listingsMap[$listing.Name] = $listingAttributes
+        $listingsMap | Add-Member -Name $listing.Name -Type NoteProperty -Value $listingAttributes
     }
 
     return $listingsMap
