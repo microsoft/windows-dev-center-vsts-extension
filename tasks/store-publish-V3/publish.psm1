@@ -266,7 +266,7 @@ function Start-Publishing
         else
         {
             Write-Verbose "Source Folder of packages: $SourceFolder"
-            $submissionJson = [PSCustomObject]@{
+            $submissionJson = @{
                 'ProductId' = $productId
                 'ApplicationPackages' = (Get-SubmissionPackages -SourceFolder $SourceFolder -Contents $Contents)
             }
@@ -275,7 +275,7 @@ function Start-Publishing
             if ($ReleaseTrack -eq 'Flight' -or $MetadataUpdateMethod -eq 'NoUpdate')
             {
                 $submissionJson.listings = [PSCustomObject]@{}
-                $submissionParameters['JsonObject'] = [PSCustomObject]$submissionJson
+                $submissionParameters['JsonObject'] = $submissionJson
                 $submissionParameters['PackageRootPath'] = $SourceFolder
                 $submissionParameters['MediaRootPath'] = $SourceFolder
             }
