@@ -79,7 +79,19 @@ function Get-ProductIdAndFlightId
             $FlightId = Get-FlightIdFromFlightName -ProductId $productId -FlightName $FlightName -AccessToken $AccessToken
         }
 
+        if ([string]::IsNullOrEmpty($FlightId))
+        {
+            throw "Release track is set to Flight but FlightId cannot be found"
+        }
+
         Write-Verbose "Flight ID: $FlightId"
+    }
+    elseif ($ReleaseTrack -eq "Production")
+    {
+        if ((-not [string]::IsNullOrEmpty($FlightId)) -or (-not [string]::IsNullOrEmpty($FlightName)))
+        {
+            throw "Release track is set to Production but FlightId and FlightName are provided. This is not alloed"
+        }
     }
 
     return [PSCustomObject]@{ 'ProductId' = $productId;'FlightId' = $FlightId }

@@ -285,14 +285,34 @@ try
         {
             Write-Output "Polling for submission $submissionId to finish"
 
-            # Refresh AccessToken before polling to avoid token expiration
-            $commonParams['AccessToken'] = (Get-AzureRMAccessToken $endPointObj $endpointId $resource).access_token
-            if (-not $(Watch-ExistingSubmission @commonParams -SubmissionId $submissionId -TargetPublishMode $targetPublishMode))
+            $shouldMonitor = $true
+            while ($shouldMonitor)
             {
-                throw $("The submission $submissionId didn't reach the publishing state.$([Environment]::NewLine)" + `
-                "Verify issues in dev center: https://partner.microsoft.com/en-us/dashboard/products/$appId/submissions/$submissionId")
+                try
+                {
+                    # Refresh AccessToken before polling
+                    $commonParams['AccessToken'] = (Get-AzureRMAccessToken $endPointObj $endpointId $resource).access_token
+                    if (-not $(Watch-ExistingSubmission @commonParams -SubmissionId $submissionId -TargetPublishMode $targetPublishMode))
+                    {
+                        throw $("The submission $submissionId didn't reach the publishing state.$([Environment]::NewLine)" + `
+                        "Verify issues in dev center: https://partner.microsoft.com/en-us/dashboard/products/$appId/submissions/$submissionId")
+                    }
+                    Write-Output "Submission $submissionId completed"
+                    $shouldMonitor = $false
+                }
+                catch
+                {
+                    # Catch any authorization related exception and retry polling by refreshing the access token
+                    if ($_.Exception.Message -ilike "*Unauthorized*")
+                    {
+                        Write-Output "Got exception while trying to check on submission and will try again. The exception was:" -Exception $_ -Level Warning
+                    }
+                    else {
+                        throw $_
+                    }
+                }
             }
-            Write-Output "Submission $submissionId completed"
+
             Write-VstsSetResult -Result "Succeeded" -Message "Submission $submissionId completed"
         }
     }
