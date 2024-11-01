@@ -305,7 +305,7 @@ try
                     # Catch any authorization related exception and retry polling by refreshing the access token
                     if ($_.Exception.Message -ilike "*Unauthorized*")
                     {
-                        Write-Output "Got exception while trying to check on submission and will try again. The exception was:" -Exception $_ -Level Warning
+                        Write-Output "Got exception with authentication while trying to check on submission. Will try again. The exception was:" -Exception $_ -Level Warning
                     }
                     else {
                         throw $_
