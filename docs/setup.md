@@ -10,6 +10,11 @@
 
 4. [Add tasks](#task-reference) to your release definitions.
 
+> [!CAUTION]
+> **Do not use the V3 versions of those tasks!**
+> 
+> They are using a non-public API (see https://github.com/microsoft/windows-dev-center-vsts-extension/issues/124)
+
 ## Prerequisites
 
 1. You must have an Azure Active Directory, and you must have [global administrator permission](https://azure.microsoft.com/en-us/documentation/articles/active-directory-assign-admin-roles/) for the directory. You can create a new Azure AD [from Dev Center](https://docs.microsoft.com/en-us/windows/uwp/publish/associate-azure-ad-with-dev-center#create-a-brand-new-azure-ad-to-associate-with-your-partner-center-account). If you already use Office 365 or other business services from Microsoft,
