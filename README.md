@@ -2,6 +2,10 @@
 
 This extension provides tasks to automate the release of your Windows apps to the Windows Store from your continuous integration environment in Azure DevOps (formely Visual Studio Team Services or VSTS). You no longer need to manually update your apps to the [Windows Partner Center dashboard](https://partner.microsoft.com/en-us/dashboard/windows/overview).
 
+> [!CAUTION]
+> **Do not use the V3 versions of those tasks!**    
+> They are using a non-public API (see https://github.com/microsoft/windows-dev-center-vsts-extension/issues/124)
+
 ## Setup
 
 See instructions on setting up the extension in [Setup](./docs/setup.md)
