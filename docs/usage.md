@@ -1,8 +1,7 @@
 # Usage
 
 > [!CAUTION]
-> **Do not use the V3 versions of those tasks!**
-> 
+> **Do not use the V3 versions of those tasks!**    
 > They are using a non-public API (see https://github.com/microsoft/windows-dev-center-vsts-extension/issues/124)
 
 ## Adding extension to the pipeline
