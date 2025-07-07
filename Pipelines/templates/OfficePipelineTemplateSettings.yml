@@ -1,9 +1,17 @@
 parameters:
-- name: isProduction
+- name: officialTemplate
   type: boolean
+  default: true
+- name: poolConfiguration
+  type: object
+  default:
+    name: Azure-Pipelines-1ESPT-ExDShared
 - name: stages
   type: stageList
   default: []
+- name: serviceTreeId
+  type: string
+  default: 7bf80b2c-ef84-47f3-bc43-043356dcb9be
 
 resources:
   repositories:
@@ -13,13 +21,15 @@ resources:
     ref: refs/tags/release
 
 extends:
-  ${{ if parameters.isProduction }}:
+  ${{ if parameters.officialTemplate }}:
     template: /v1/Office.Official.PipelineTemplate.yml@OfficePipelineTemplates
   ${{ else }}:
     template: /v1/Office.Unofficial.PipelineTemplate.yml@OfficePipelineTemplates
 
   parameters:
-    pool: Azure-Pipelines-1ESPT-ExDShared
+    pool:
+      ${{ parameters.poolConfiguration }}
+    serviceTreeId: ${{ parameters.serviceTreeId }}
     sdl:
       eslint:
         configuration: required

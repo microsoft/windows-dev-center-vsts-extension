@@ -1,0 +1,25 @@
+trigger:
+- none
+
+# Pull request triggers are not supported by ADO repos
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/troubleshooting/troubleshooting?view=azure-devops#pull-request-triggers-not-supported-with-azure-repos
+# Leave this section as is for demonstrating the syntax, or in case we migrate to a different repo.
+pr:
+- master
+
+schedules:
+- cron: '0 8 * * *'
+  displayName: Daily Build
+  branches:
+    include:
+    - master
+  always: true
+
+variables:
+- name: System.Debug
+  value: true
+- name: tags
+  value: production
+
+extends:
+  template: templates/WindowsDevCenterVstsExtension-Build-Base.yml

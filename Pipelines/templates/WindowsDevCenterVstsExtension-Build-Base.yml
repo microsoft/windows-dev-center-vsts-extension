@@ -1,0 +1,33 @@
+extends:
+  template: /Pipelines/templats/OfficePipelineTemplateSettings.yml
+  parameters:
+    stages:
+    - stage:
+      jobs:
+      - job:
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            targetPath: $(Build.ArtifactStagingDirectory)
+            artifactName: drop
+        steps:
+        - script: npm install -g tfx-cli
+        - script: npm install -g typings
+        - task: Npm@1
+          inputs:
+            command: ci
+            verbose: true
+        - script: typings install
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+            arguments: '--dev'
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+            arguments: '--public'
+        - task: CopyFiles@2
+          inputs:
+            SourceFolder: build/extension
+            Contents: '*.vsix'
+            TargetFolder: '$(build.artifactstagingdirectory)'
