@@ -15,7 +15,7 @@ extends:
         - script: npm install -g typings
         - task: Npm@1
           inputs:
-            command: ci
+            command: install
             verbose: true
         - script: typings install
         - task: gulp@0
