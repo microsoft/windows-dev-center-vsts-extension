@@ -399,13 +399,18 @@ gulp.task('compile', gulp.series('_compile_only', 'dependencies', '_copy_common'
  Main tasks (that you would want to typically run)
 ***** */
 
-// Remove everything in the build and lib directory. 
+// Remove everything in the build directory.
 gulp.task('clean', function () {
-    return del([BUILD_DIR + '**/*', './lib/ps_modules/**/*', './packages/**/*', './nuget.exe']);
+    return del([BUILD_DIR + '**/*']);
+});
+
+// Remove all tasks and dependencies from the build directory, so that we can start fresh.
+gulp.task('clean_dependencies', function () {
+    return del(['./lib/ps_modules/**/*', './packages/**/*', './nuget.exe']);
 });
 
 // Create a VSIX package for the extension. --publisher specifies the publisher to use, if different from the manifest.
-gulp.task('package', gulp.series(gulp.series('compile', '_task_metadata', '_extension_metadata', 'dependencies', '_remove_tasks'), function (callback) {
+gulp.task('package', gulp.series(gulp.series('compile', '_task_metadata', '_extension_metadata', 'dependencies', '_remove_tasks', 'clean_dependencies'), function (callback) {
     var cmd = 'tfx extension create'
                 + ' --root ' + BUILD_DIR
                 + ' --manifest-globs ' + EXTENSION_MANIFEST
@@ -428,4 +433,4 @@ gulp.task('package', gulp.series(gulp.series('compile', '_task_metadata', '_exte
     exec(cmd, callback);
 }));
 
-gulp.task('default', gulp.series('clean', 'package'));
+gulp.task('default', gulp.series('package'));
