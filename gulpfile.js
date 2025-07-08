@@ -428,4 +428,4 @@ gulp.task('package', gulp.series(gulp.series('compile', '_task_metadata', '_exte
     exec(cmd, callback);
 }));
 
-gulp.task('default', gulp.series('package'));
+gulp.task('default', gulp.series('clean', 'package'));
