@@ -1,5 +1,5 @@
 extends:
-  template: /Pipelines/templats/OfficePipelineTemplateSettings.yml
+  template: OfficePipelineTemplateSettings.yml
   parameters:
     stages:
     - stage:
@@ -30,4 +30,4 @@ extends:
           inputs:
             SourceFolder: build/extension
             Contents: '*.vsix'
-            TargetFolder: '$(build.artifactstagingdirectory)'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)'
