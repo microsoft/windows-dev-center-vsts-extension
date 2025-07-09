@@ -133,7 +133,7 @@ gulp.task('nuget_restore', gulp.series('nuget_download', function() {
 
 gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
     var copyAzureStorage = gulp.src(['./packages/WindowsAzure.Storage.9.0.0/lib/net45/Microsoft.WindowsAzure.Storage.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyDataMovement = gulp.src(['./packages/Microsoft.Azure.Storage.DataMovement.2.0.5/lib/net452/Microsoft.Azure.Storage.DataMovement.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyDataMovement = gulp.src(['./packages/Microsoft.Azure.Storage.DataMovement.0.7.1/lib/net45/Microsoft.WindowsAzure.Storage.DataMovement.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyApplicationsInsight = gulp.src(['./packages/Microsoft.ApplicationInsights.2.0.1/lib/net45/Microsoft.ApplicationInsights.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTracingEventSource = gulp.src(['./packages/Microsoft.Diagnostics.Tracing.EventSource.Redist.1.1.24/lib/net40/Microsoft.Diagnostics.Tracing.EventSource.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyThreadingTasks = gulp.src(['./packages/Microsoft.Bcl.Async.1.0.168/lib/net40/Microsoft.Threading.Tasks.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
