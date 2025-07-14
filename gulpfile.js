@@ -139,8 +139,8 @@ gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
     var copyThreadingTasks = gulp.src(['./packages/Microsoft.Bcl.Async.1.0.168/lib/net40/Microsoft.Threading.Tasks.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyNewtonsoft = gulp.src(['./packages/Newtonsoft.Json.13.0.3/lib/net45/Newtonsoft.json.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyVstsClient = gulp.src(['./packages/Microsoft.VisualStudio.Services.Client.19.225.1/lib/net472/**/*']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyIdentityClient = gulp.src(['./packages/Microsoft.Identity.Client.4.73.1/lib/net462/Microsoft.Identity.Client.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyIdentityAbstraction = gulp.src(['./packages/Microsoft.IdentityModel.Abstractions.8.12.1/lib/net462/Microsoft.IdentityModel.Abstractions.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyIdentityClient = gulp.src(['./packages/Microsoft.Identity.Client.4.60.3/lib/net462/Microsoft.Identity.Client.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyIdentityAbstraction = gulp.src(['./packages/Microsoft.IdentityModel.Abstractions.6.35.0/lib/net45/Microsoft.IdentityModel.Abstractions.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTfsWebApi = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.WebApi.19.225.1/lib/net472/**/*']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTfsCommonContract = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.19.225.1/lib/net472/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyAspNetWebApi = gulp.src(['./packages/Microsoft.AspNet.WebApi.Client.5.2.7/lib/net45/System.Net.Http.Formatting.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
