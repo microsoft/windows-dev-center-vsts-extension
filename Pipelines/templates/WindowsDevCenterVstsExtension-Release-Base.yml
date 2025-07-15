@@ -8,7 +8,7 @@ resources:
   - repository: MROPT
     type: git
     name: 1ESPipelineTemplates/MROPT
-    ref: refs/heads/releases/templates
+    ref: refs/heads/user/tianw/codesign
 
 extends:
   template: /v1/extends/AzureDevOps/VstsExtensionRelease.yml@MROPT
