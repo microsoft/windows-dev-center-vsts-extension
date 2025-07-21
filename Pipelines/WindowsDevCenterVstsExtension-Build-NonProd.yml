@@ -1,11 +1,4 @@
-trigger:
-- none
-
-# Pull request triggers are not supported by ADO repos
-# https://learn.microsoft.com/en-us/azure/devops/pipelines/troubleshooting/troubleshooting?view=azure-devops#pull-request-triggers-not-supported-with-azure-repos
-# Leave this section as is for demonstrating the syntax, or in case we migrate to a different repo.
-pr:
-- master
+trigger: none
 
 schedules:
 - cron: '0 8 * * *'
