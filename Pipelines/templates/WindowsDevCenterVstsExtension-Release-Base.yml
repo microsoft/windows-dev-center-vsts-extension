@@ -21,5 +21,5 @@ extends:
       targetPath: $(Pipeline.Workspace)/drop
     approvers: RDX - MRO Backend-Super_ADO_Admin
     stagingVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-dev-*.vsix
-    productionVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-*.vsix
+    productionVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-2*.vsix
     releaseBranch: refs/heads/master
