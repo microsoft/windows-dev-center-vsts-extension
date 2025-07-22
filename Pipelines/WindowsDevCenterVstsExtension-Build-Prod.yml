@@ -1,0 +1,12 @@
+trigger: none
+
+pr: none
+
+variables:
+- name: System.Debug
+  value: true
+- name: tags
+  value: production
+
+extends:
+  template: templates/WindowsDevCenterVstsExtension-Build-Base.yml

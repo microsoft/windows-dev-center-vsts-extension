@@ -1,0 +1,68 @@
+resources:
+  repositories:
+  - repository: MROPT
+    type: git
+    name: 1ESPipelineTemplates/MROPT
+    ref: refs/heads/releases/templates
+
+extends:
+  template: /v1/extends/OfficeDefaultPool.yml@MROPT
+  parameters:
+    officialTemplate: true
+    serviceTreeId: 7bf80b2c-ef84-47f3-bc43-043356dcb9be
+    sdl:
+      eslint:
+        configuration: required
+        parser: '@typescript-eslint/parser'
+        parserOptions: 'sourceType:module'
+        enableExclusions: true
+        exclusionPatterns: ""
+        customEnvironments: true
+        environmentsBrowser: true
+        environmentsNode: true
+        environmentsCommonJs: false
+        environmentsSharedNodeBrowser: false
+        environmentsEs6: true
+        environmentsEs2017: true
+        environmentsEs2020: true
+        environmentsWorker: false
+        environmentsAmd: false
+        environmentsMocha: false
+        environmentsJasmine: false
+        environmentsJest: false
+        environmentsPhantomjs: false
+        environmentsProtractor: false
+        environmentsQunit: false
+        environmentsJquery: false
+        environmentsPrototypejs: false
+        environmentsShelljs: false
+        environmentsMeteor: false
+        environmentsMongo: false
+    stages:
+    - stage:
+      jobs:
+      - job:
+        templateContext:
+          outputs:
+          - output: pipelineArtifact
+            targetPath: $(Build.ArtifactStagingDirectory)
+            artifactName: drop
+        steps:
+        - script: npm install -g tfx-cli
+        - task: Npm@1
+          inputs:
+            command: install
+            verbose: true
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+            arguments: '--dev'
+        - task: gulp@0
+          inputs:
+            gulpFile: gulpfile.js
+            arguments: '--public'
+        - task: CopyFiles@2
+          inputs:
+            SourceFolder: build/extension
+            Contents: '*.vsix'
+            TargetFolder: '$(Build.ArtifactStagingDirectory)'

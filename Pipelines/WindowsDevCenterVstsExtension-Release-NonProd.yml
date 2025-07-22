@@ -1,0 +1,19 @@
+trigger: none
+
+pr: none
+
+variables:
+- name: System.Debug
+  value: true
+- name: tags
+  value: nonproduction
+
+resources:
+  pipelines:
+  - pipeline: WindowsDevCenterVstsExtension
+    source: WindowsDevCenterVstsExtension-Build-NonProd
+
+extends:
+  template: templates/WindowsDevCenterVstsExtension-Release-Base.yml
+  parameters:
+    isProdEnabled: false

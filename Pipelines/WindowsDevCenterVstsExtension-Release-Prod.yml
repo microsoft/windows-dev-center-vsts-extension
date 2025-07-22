@@ -1,0 +1,21 @@
+trigger: none
+
+pr: none
+
+variables:
+- name: System.Debug
+  value: true
+- name: tags
+  value: production
+
+resources:
+  pipelines:
+  - pipeline: WindowsDevCenterVstsExtension
+    source: WindowsDevCenterVstsExtension-Build-Prod
+    trigger:
+      branches:
+        include:
+        - master
+
+extends:
+  template: templates/WindowsDevCenterVstsExtension-Release-Base.yml

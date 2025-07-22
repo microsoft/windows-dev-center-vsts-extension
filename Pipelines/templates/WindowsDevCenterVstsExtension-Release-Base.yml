@@ -1,0 +1,25 @@
+parameters:
+- name: isProdEnabled
+  type: boolean
+  default: true
+
+resources:
+  repositories:
+  - repository: MROPT
+    type: git
+    name: 1ESPipelineTemplates/MROPT
+    ref: refs/heads/releases/templates
+
+extends:
+  template: /v1/extends/AzureDevOps/VstsExtensionRelease.yml@MROPT
+  parameters:
+    isProdEnabled: ${{ parameters.isProdEnabled }}
+    pipelineInput:
+      input: pipelineArtifact
+      pipeline: WindowsDevCenterVstsExtension
+      artifactName: drop
+      targetPath: $(Pipeline.Workspace)/drop
+    approvers: RDX - MRO Backend-Super_ADO_Admin
+    stagingVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-dev-*.vsix
+    productionVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-*.vsix
+    releaseBranch: refs/heads/master
