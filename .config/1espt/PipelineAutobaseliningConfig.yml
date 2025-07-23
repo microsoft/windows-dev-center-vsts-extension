@@ -23,3 +23,25 @@ pipelines:
           lastModifiedDate: 2025-07-22
         roslyn:
           lastModifiedDate: 2025-07-22
+  35444:
+    retail:
+      source:
+        credscan:
+          lastModifiedDate: 2025-07-23
+        eslint:
+          lastModifiedDate: 2025-07-23
+        bandit:
+          lastModifiedDate: 2025-07-23
+        psscriptanalyzer:
+          lastModifiedDate: 2025-07-23
+        armory:
+          lastModifiedDate: 2025-07-23
+      binary:
+        credscan:
+          lastModifiedDate: 2025-07-23
+        binskim:
+          lastModifiedDate: 2025-07-23
+        prefast:
+          lastModifiedDate: 2025-07-23
+        roslyn:
+          lastModifiedDate: 2025-07-23
