@@ -3,6 +3,8 @@
         "target": "ES6",
         "module": "commonjs",
         "sourceMap": true,
-        "sourceRoot": "${workspaceRoot}/tasks"
+        "sourceRoot": "${workspaceRoot}/tasks",
+        "types": [],
+        "skipLibCheck": true
     }
 }
