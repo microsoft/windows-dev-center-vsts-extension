@@ -24,7 +24,7 @@
   "devDependencies": {
     "@types/node": "^24.1.0",
     "@types/q": "^1.5.8",
-    "del": "^8.0.0",
+    "del": "^5.1.0",
     "fs-extra": "^11.3.0",
     "gulp": "^4.0.2",
     "gulp-exec": "^3.0.2",
