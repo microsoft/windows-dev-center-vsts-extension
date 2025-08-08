@@ -4,6 +4,10 @@ resources:
     type: git
     name: 1ESPipelineTemplates/MROPT
     ref: refs/heads/releases/templates
+  - repository: MRO
+    type: git
+    name: CLE/MRO
+    ref: refs/heads/dev
 
 extends:
   template: /v1/extends/OfficeDefaultPool.yml@MROPT
@@ -66,3 +70,7 @@ extends:
             SourceFolder: build/extension
             Contents: '*.vsix'
             TargetFolder: '$(Build.ArtifactStagingDirectory)'
+        - template: /pipelines/VstsExtensions/templates/AdoExtensionCodeSign.yml@MRO
+          parameters:
+            vsixDirectory: $(Build.ArtifactStagingDirectory)
+            vsixFilePattern: '*.vsix'
