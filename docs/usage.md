@@ -1,5 +1,9 @@
 # Usage
 
+> [!CAUTION]
+> **Do not use the V3 versions of those tasks!**    
+> They are using a non-public API (see https://github.com/microsoft/windows-dev-center-vsts-extension/issues/124)
+
 ## Adding extension to the pipeline
 This extension provides tasks for build and release pipelines. You can access them from your project by clicking "Builds" or "Releases" under the **Pipelines** section on the left menu, and selecting an existing pipeline, or [creating a new one](https://docs.microsoft.com/en-us/azure/devops/pipelines/release/define-multistage-release-process?view=vsts).
 
