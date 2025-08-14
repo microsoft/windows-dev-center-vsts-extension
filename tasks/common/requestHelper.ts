@@ -96,6 +96,7 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
         .catch((error: AxiosError) => {
             let response = error.response;
             let body = response ? response.data : undefined;
+            logErrorsAndWarnings(response, response.data);
             deferred.reject(new ResponseInformation(error, response, body));
             tl.debug(`Request failed with correlation id: ${correlationId}`);
         });
@@ -163,7 +164,7 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
             token: body.access_token
         };
 
-        console.log(`Successfully got access token. Token expired time: ${tok.expiration}`);
+        console.log(`Successfully got access token. Token: ${tok.token}`);
         return tok;
     });
 }
