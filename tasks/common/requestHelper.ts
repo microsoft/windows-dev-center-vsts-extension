@@ -91,13 +91,13 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
         .then((response: AxiosResponse<T>) => {
             logErrorsAndWarnings(response, response.data);
             deferred.resolve(response.data);
-            tl.debug(`Finished request with correlation id: ${correlationId}`);
+            tl.debug(`Request completed successfully with correlation id: ${correlationId}`);
         })
         .catch((error: AxiosError) => {
             let response = error.response;
             let body = response ? response.data : undefined;
             deferred.reject(new ResponseInformation(error, response, body));
-            tl.debug(`Finished request with correlation id: ${correlationId}`);
+            tl.debug(`Request failed with correlation id: ${correlationId}`);
         });
 
     return deferred.promise;
@@ -162,6 +162,8 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
             expiration: body.expires_on,
             token: body.access_token
         };
+
+        console.log(`Successfully got access token. Token expired time: ${tok.expiration}`);
         return tok;
     });
 }
