@@ -164,7 +164,6 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
             token: body.access_token
         };
 
-        console.log(`Successfully got access token. Token: ${tok.token}`);
         return tok;
     });
 }
