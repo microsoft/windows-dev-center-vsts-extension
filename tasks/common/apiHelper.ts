@@ -168,13 +168,13 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
         var foundAppResource = (<any[]>body.value).find(x => x.primaryName == appName);
         if (foundAppResource)
         {
-            tl.debug(`App found with ${foundAppResource.id}`);
+            tl.debug(`Found App with ID: ${foundAppResource.id}`);
             return foundAppResource.id;
         }
 
         if (body['@nextLink'] === undefined)
         {
-            throw new Error(`No application with name "${appName}" was found`);
+            throw new Error(`No application with name "${appName}" is found`);
         }
 
         return getAppIdByName(token, appName, body['@nextLink']);
@@ -248,7 +248,7 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
  */
 function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<boolean>
 {
-    const statusMsg = `Submission status for "${resourceLocation}"`;
+    const statusMsg = `Checking submission status for "${resourceLocation}"`;
     const requestParams = {
         url: ROOT + resourceLocation + '/status',
         method: 'GET'
@@ -339,8 +339,7 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
     var requestParams = {
         url: url,
         method: 'PUT',
-        json: true, // Sets content-type and length for us, and parses the request/response appropriately
-        body: submissionResource
+        data: submissionResource
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
