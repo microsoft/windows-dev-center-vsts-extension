@@ -86,12 +86,9 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
         options.headers = {};
     }
     options.headers['CorrelationId'] = correlationId;
-
     const payload = options.data !== undefined && options.data !== null ? options.data : '';
-    console.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
+    tl.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
 
-    //print out the request headers
-    console.debug(`Request headers: ${JSON.stringify(options.headers)}`);
 
     axios(options)
         .then((response: AxiosResponse<T>) => {
@@ -102,7 +99,6 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
         .catch((error: AxiosError) => {
             let response = error.response;
             let body = response ? response.data : undefined;
-            logErrorsAndWarnings(response, response.data);
             deferred.reject(new ResponseInformation(error, response, body));
             tl.debug(`Request failed with correlation id: ${correlationId}`);
         });

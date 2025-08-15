@@ -16,10 +16,15 @@ function gatherParams()
 {
     var credentials: request.Credentials;
     var endpointId = tl.getInput('serviceEndpoint', true);
+    tl.debug(`Getting service endpoint details for endpoint: ${endpointId}`);
 
     /* Contrary to the other tl.get* functions, the boolean param here
         indicates whether the parameter is __optional__ */
     var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
+    tl.debug(`Endpoint tenant: ${endpointAuth.parameters['tenantId']}`);
+    tl.debug(`Endpoint client ID: ${endpointAuth.parameters['servicePrincipalId']}`);
+    tl.debug(`Endpoint URL: ${endpointAuth.parameters['url']}`);
+
     credentials =
     {
         tenant : endpointAuth.parameters['tenantId'],
