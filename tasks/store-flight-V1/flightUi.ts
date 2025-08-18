@@ -10,23 +10,16 @@ import fli = require('./flight');
 import path = require('path');
 
 import tl = require('azure-pipelines-task-lib');
-import { url } from 'inspector/promises';
 
 /** Obtain and validate parameters from task UI. */
 function gatherParams()
 {
     var credentials: request.Credentials;
     var endpointId = tl.getInput('serviceEndpoint', true);
-    tl.debug(`Getting service endpoint details for endpoint: ${endpointId}`);
 
     /* Contrary to the other tl.get* functions, the boolean param here
         indicates whether the parameter is __optional__ */
     var endpointAuth = tl.getEndpointAuthorization(endpointId, false);
-    tl.debug(`Endpoint authorization: ${JSON.stringify(endpointAuth)}`);
-    tl.debug(`Endpoint tenant: ${endpointAuth.parameters['tenantId']}`);
-    tl.debug(`Endpoint client ID: ${endpointAuth.parameters['servicePrincipalId']}`);
-    tl.debug(`Endpoint URL: ${endpointAuth.parameters['url']}`);
-
     credentials =
     {
         tenant : endpointAuth.parameters['tenantId'],
@@ -35,12 +28,6 @@ function gatherParams()
     };
 
     var endpointUrl: string = endpointAuth.parameters['url'];
-
-    const [protocol, domain] = endpointUrl.split('://');
-    tl.debug(`Endpoint URL Protocol: ${protocol}`);
-    tl.debug(`Endpoint URL Domain: ${domain}`);
-
-
     if (endpointUrl.lastIndexOf('/') == endpointUrl.length - 1)
     {
         endpointUrl = endpointUrl.substring(0, endpointUrl.length - 1);

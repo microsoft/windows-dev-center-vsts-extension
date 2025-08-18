@@ -171,8 +171,9 @@ export function performAuthenticatedRequest<T>(
  * @param credentials Credentials to use for authentication.
  * @returns Promises an access token to use to communicate with the resource.
  */
-export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken> {
-    const endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
+export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
+{
+    var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
     const requestParams = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
