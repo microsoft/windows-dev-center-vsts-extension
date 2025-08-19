@@ -12,24 +12,26 @@
 
 ## Prerequisites
 
-1. You must have an Azure Active Directory, and you must have [global administrator permission](https://azure.microsoft.com/en-us/documentation/articles/active-directory-assign-admin-roles/) for the directory. You can create a new Azure AD [from Dev Center](https://docs.microsoft.com/en-us/windows/uwp/publish/associate-azure-ad-with-dev-center#create-a-brand-new-azure-ad-to-associate-with-your-partner-center-account). If you already use Office 365 or other business services from Microsoft,
+1. Determine which major version of the extension you should use. If you are Microsoft FTE using Azure DevOps pipeline within Microsoft please use v3. If you are outside of Microsoft please use v0.
+
+2. You must have an Azure Active Directory, and you must have [global administrator permission](https://azure.microsoft.com/en-us/documentation/articles/active-directory-assign-admin-roles/) for the directory. You can create a new Azure AD [from Dev Center](https://docs.microsoft.com/en-us/windows/uwp/publish/associate-azure-ad-with-dev-center#create-a-brand-new-azure-ad-to-associate-with-your-partner-center-account). If you already use Office 365 or other business services from Microsoft,
      you already have an AAD. Otherwise, you can
      [create a new AAD in Partner Center](https://msdn.microsoft.com/windows/uwp/publish/manage-account-users)
      for no additional charge.
 
-2. You must [associate your AAD with your Partner Center account](https://learn.microsoft.com/en-us/windows/apps/publish/partner-center/associate-existing-azure-ad-tenant-with-partner-center-account) obtain the credentials to allow this extension to access your account and perform actions on your behalf.
+3. You must [associate your AAD with your Partner Center account](https://learn.microsoft.com/en-us/windows/apps/publish/partner-center/associate-existing-azure-ad-tenant-with-partner-center-account) obtain the credentials to allow this extension to access your account and perform actions on your behalf.
 
-3. The app you want to publish must already exist: this extension can only publish updates to existing applications. You can [create your app in Partner Center](https://msdn.microsoft.com/windows/uwp/publish/create-your-app-by-reserving-a-name).
+4. The app you want to publish must already exist: this extension can only publish updates to existing applications. You can [create your app in Partner Center](https://msdn.microsoft.com/windows/uwp/publish/create-your-app-by-reserving-a-name).
 
-4. You must have already [created at least one submission](https://msdn.microsoft.com/windows/uwp/publish/app-submissions) for your app before you can use the Publish task provided by this extension. If you have not created a submission, the task will fail.
+5. You must have already [created at least one submission](https://msdn.microsoft.com/windows/uwp/publish/app-submissions) for your app before you can use the Publish task provided by this extension. If you have not created a submission, the task will fail.
 
-5. More information and extra prerequisites specific to the API can be found [here](https://msdn.microsoft.com/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services).
+6. More information and extra prerequisites specific to the API can be found [here](https://msdn.microsoft.com/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services).
 
-## Obtaining your credentials in v3.\* tasks
+## Obtaining your credentials in v3.\* tasks (For Microsoft FTEs only)
 
 In V3 Tasks, we have added support for using [federated credentials](wifauth.md) or [certificate authentication](certificateauth.md) mechanism. You can also keep using the App secret authentication described below for v0.\* tasks. Users within Microsoft are required to use secret-less authentication method as part of our security requirement. 
 
-## Obtaining your credentials in v0.\* tasks
+## Obtaining your credentials in v0.\* tasks (For users outside of Microsoft)
 
 ### Authentication in v0.\* tasks
 
