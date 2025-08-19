@@ -16,7 +16,6 @@ function gatherParams()
 {
     var credentials: request.Credentials;
     var endpointId = tl.getInput('serviceEndpoint', true);
-    tl.debug(`Getting service endpoint details for endpoint: ${endpointId}`);
 
     /* Contrary to the other tl.get* functions, the boolean param here
         indicates whether the parameter is __optional__ */
@@ -29,7 +28,6 @@ function gatherParams()
     };
 
     var endpointUrl: string = endpointAuth.parameters['url'];
-
     if (endpointUrl.lastIndexOf('/') == endpointUrl.length - 1)
     {
         endpointUrl = endpointUrl.substring(0, endpointUrl.length - 1);
@@ -97,6 +95,7 @@ function dumpParams(taskParams: pub.PublishParams): void
         tl.debug(`App name: ${taskParams.appName}`);
     }
 
+    tl.debug(`Endpoint: ${taskParams.endpoint}`);
     tl.debug(`Force delete: ${taskParams.force}`);
     tl.debug(`Metadata update type: ${taskParams.metadataUpdateType}`);
     tl.debug(`Update images: ${taskParams.updateImages}`);
