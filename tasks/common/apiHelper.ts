@@ -168,7 +168,7 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
         var foundAppResource = (<any[]>body.value).find(x => x.primaryName == appName);
         if (foundAppResource)
         {
-            tl.debug(`App found with ID: ${foundAppResource.id}`);
+            tl.debug(`App found with ${foundAppResource.id}`);
             return foundAppResource.id;
         }
 

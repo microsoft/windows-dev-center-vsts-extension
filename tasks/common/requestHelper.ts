@@ -66,14 +66,14 @@ export class ResponseInformation
     }
 
     // For friendly logging
-    toString(): string 
+    toString(): string
     {
-        let log: string;
+        var log: string;
 
         if (this.error != undefined)
         {
             log = `Error ${JSON.stringify(this.error)}`;
-        } 
+        }
         else
         {
             var bodyToPrint = this.body;
@@ -110,7 +110,9 @@ export class ResponseInformation
  * @param options Options describing the request to execute.
  * @param stream If specified, pipe this stream into the request.
  */
-export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T>
+export function performRequest<T>(
+    options: AxiosRequestConfig):
+    Q.Promise<T>
 {
     var deferred = Q.defer<T>();
 
@@ -153,13 +155,13 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T>
  */
 export function performAuthenticatedRequest<T>(
     auth: AccessToken,
-    options: AxiosRequestConfig
-): Q.Promise<T>
+    options: AxiosRequestConfig):
+    Q.Promise<T>
 {
     // The expiration check is a function that returns a promise
-    var expirationCheck = function () 
+    var expirationCheck = function ()
     {
-        if (isExpired(auth)) 
+        if (isExpired(auth))
         {
             tl.debug(`Access token expired for resource: ${auth.resource}. Will refresh token.`);
             return authenticate(auth.resource, auth.credentials).then(function (newAuth)
@@ -168,12 +170,13 @@ export function performAuthenticatedRequest<T>(
                 auth.expiration = newAuth.expiration;
             });
         }
-        else 
+        else
         {
             /* This looks strange, but it returns a promise for void, which is exactly what we need. */
             return Q.when();
         }
     };
+
 
     return expirationCheck() // Call the expiration check to obtain a promise for it.
         .then<T>(function () // Chain the use of the token to that promise.
