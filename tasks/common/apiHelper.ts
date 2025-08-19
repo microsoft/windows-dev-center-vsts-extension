@@ -339,7 +339,11 @@ export function putSubmission(token: request.AccessToken, url: string, submissio
     var requestParams = {
         url: url,
         method: 'PUT',
-        data: submissionResource
+        data: submissionResource,
+        headers:
+        {
+            'Content-Type': 'application/json'
+        }
     };
 
     var putGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);

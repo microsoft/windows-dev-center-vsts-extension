@@ -1,5 +1,20 @@
 import requestHelpers = require('../../tasks/common/requestHelper');
 
+// Test function authenticate
+test('authenticate', async () => {
+    const cred: requestHelpers.Credentials = {
+        tenant: "",
+        clientId: "",
+        clientSecret: ""
+    }
+
+    var resource = "https://manage.devcenter.microsoft.com";
+
+    var response = await requestHelpers.authenticate(resource, cred);
+    // Depending on the API request you are testing you can add what you expect from the response.
+    // e.g. expect(response).toEqual({ success: true });
+});
+
 // Test function performAuthenticatedRequest
 test('performAuthenticatedRequest', async () => {
     const cred: requestHelpers.Credentials = {
@@ -18,7 +33,6 @@ test('performAuthenticatedRequest', async () => {
     var requestParams = {
         url: '<<Replace this with any test URL>>',
         method: 'GET',
-        headers: {}
     };
 
     console.log("Begin running performAuthenticatedRequest");
@@ -46,7 +60,6 @@ test('performAuthenticatedRequestWithRetry', async () => {
     var requestParams = {
         url: '<<Replace this with any test URL>>',
         method: 'GET',
-        headers: {}
     };
 
     console.log("Begin running performAuthenticatedRequest");

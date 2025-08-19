@@ -197,7 +197,6 @@ export function performAuthenticatedRequest<T>(
                 options.headers['Authorization'] = 'Bearer ' + auth.token;
             }
 
-            options.headers['Content-Type'] = 'application/json';
             return performRequest<T>(options);
         });
 }
