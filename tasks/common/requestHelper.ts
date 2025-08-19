@@ -124,13 +124,18 @@ export function performRequest<T>(
     // Log correlation Id for better diagnosis
     var correlationId = uuidv4();
     tl.debug(`Starting request with correlation id: ${correlationId}`);
-    if (!options.headers)
+    if (options.headers === undefined)
     {
-        options.headers = {};
+        options.headers = {
+            'CorrelationId': correlationId
+        }
     }
-    options.headers['CorrelationId'] = correlationId;
+    else
+    {
+        options.headers['CorrelationId'] = correlationId;
+    }
+
     var payload = options.data !== undefined && options.data !== null ? options.data : '';
- 
     tl.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
 
     axios(options)
@@ -181,11 +186,17 @@ export function performAuthenticatedRequest<T>(
     return expirationCheck() // Call the expiration check to obtain a promise for it.
         .then<T>(function () // Chain the use of the token to that promise.
         {
-            if (!options.headers)
+            if (options.headers === undefined)
             {
-                options.headers = {};
+                options.headers = {
+                    'Authorization': 'Bearer ' + auth.token
+                }
             }
-            options.headers['Authorization'] = 'Bearer ' + auth.token;
+            else
+            {
+                options.headers['Authorization'] = 'Bearer ' + auth.token;
+            }
+
             options.headers['Content-Type'] = 'application/json';
             return performRequest<T>(options);
         });
