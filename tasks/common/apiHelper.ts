@@ -168,13 +168,13 @@ export function getAppIdByName(token: request.AccessToken, appName: string, curr
         var foundAppResource = (<any[]>body.value).find(x => x.primaryName == appName);
         if (foundAppResource)
         {
-            tl.debug(`Found App with ID: ${foundAppResource.id}`);
+            tl.debug(`App found with ID: ${foundAppResource.id}`);
             return foundAppResource.id;
         }
 
         if (body['@nextLink'] === undefined)
         {
-            throw new Error(`No application with name "${appName}" is found`);
+            throw new Error(`No application with name "${appName}" was found`);
         }
 
         return getAppIdByName(token, appName, body['@nextLink']);
@@ -248,7 +248,7 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
  */
 function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<boolean>
 {
-    const statusMsg = `Checking submission status for "${resourceLocation}"`;
+    const statusMsg = `Submission status for "${resourceLocation}"`;
     const requestParams = {
         url: ROOT + resourceLocation + '/status',
         method: 'GET'

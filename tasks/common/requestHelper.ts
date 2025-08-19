@@ -52,33 +52,42 @@ function isExpired(token: AccessToken): boolean
 }
 
 /** All the information given to us by the request module along a response. */
-export class ResponseInformation {
+export class ResponseInformation
+{
     error: any;
     response: AxiosResponse | undefined;
     body: any;
 
-    constructor(_err: any, _res: AxiosResponse | undefined, _bod: any) {
+    constructor(_err: any, _res: AxiosResponse | undefined, _bod: any)
+    {
         this.error = _err;
         this.response = _res;
         this.body = _bod;
     }
 
-    toString(): string {
+    // For friendly logging
+    toString(): string 
+    {
         let log: string;
 
-        if (this.error != undefined) {
+        if (this.error != undefined)
+        {
             log = `Error ${JSON.stringify(this.error)}`;
-        } else {
-            let bodyToPrint = this.body;
-            if (typeof bodyToPrint != 'string') {
+        } 
+        else
+        {
+            var bodyToPrint = this.body;
+            if (typeof bodyToPrint != 'string')
+            {
                 bodyToPrint = JSON.stringify(bodyToPrint);
             }
-            let statusCode: string = (this.response != undefined && this.response.status != undefined) ? this.response.status.toString() : 'unknown';
+            var statusCode: string = (this.response != undefined && this.response.status != undefined) ? this.response.status.toString() : 'unknown';
             log = `Status ${statusCode}: ${bodyToPrint}`;
         }
 
         if (this.response != undefined &&
-            this.response.headers['ms-correlationid'] != undefined) {
+            this.response.headers['ms-correlationid'] != undefined)
+        {
             log = log + ` CorrelationId: ${this.response.headers['ms-correlationid']}`;
         }
 
@@ -101,21 +110,24 @@ export class ResponseInformation {
  * @param options Options describing the request to execute.
  * @param stream If specified, pipe this stream into the request.
  */
-export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
-    const deferred = Q.defer<T>();
+export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T>
+{
+    var deferred = Q.defer<T>();
 
-    if (options.timeout === undefined) {
+    if (options.timeout === undefined)
+    {
         options.timeout = TIMEOUT;
     }
 
     // Log correlation Id for better diagnosis
-    const correlationId = uuidv4();
+    var correlationId = uuidv4();
     tl.debug(`Starting request with correlation id: ${correlationId}`);
-    if (!options.headers) {
+    if (!options.headers)
+    {
         options.headers = {};
     }
     options.headers['CorrelationId'] = correlationId;
-    const payload = options.data !== undefined && options.data !== null ? options.data : '';
+    var payload = options.data !== undefined && options.data !== null ? options.data : '';
  
     tl.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
 
@@ -142,23 +154,32 @@ export function performRequest<T>(options: AxiosRequestConfig): Q.Promise<T> {
 export function performAuthenticatedRequest<T>(
     auth: AccessToken,
     options: AxiosRequestConfig
-): Q.Promise<T> {
+): Q.Promise<T>
+{
     // The expiration check is a function that returns a promise
-    const expirationCheck = function () {
-        if (isExpired(auth)) {
+    var expirationCheck = function () 
+    {
+        if (isExpired(auth)) 
+        {
             tl.debug(`Access token expired for resource: ${auth.resource}. Will refresh token.`);
-            return authenticate(auth.resource, auth.credentials).then(function (newAuth) {
+            return authenticate(auth.resource, auth.credentials).then(function (newAuth)
+            {
                 auth.token = newAuth.token;
                 auth.expiration = newAuth.expiration;
             });
-        } else {
+        }
+        else 
+        {
+            /* This looks strange, but it returns a promise for void, which is exactly what we need. */
             return Q.when();
         }
     };
 
-    return expirationCheck()
-        .then<T>(function () {
-            if (!options.headers) {
+    return expirationCheck() // Call the expiration check to obtain a promise for it.
+        .then<T>(function () // Chain the use of the token to that promise.
+        {
+            if (!options.headers)
+            {
                 options.headers = {};
             }
             options.headers['Authorization'] = 'Bearer ' + auth.token;
@@ -175,14 +196,14 @@ export function performAuthenticatedRequest<T>(
 export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
 {
     var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
-    const requestParams = new URLSearchParams({
+    var requestParams = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
         client_secret: credentials.clientSecret,
         resource: resource
     });
 
-    const options: AxiosRequestConfig = {
+    var options: AxiosRequestConfig = {
         url: endpoint,
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -190,8 +211,9 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
     };
 
     console.log('Authenticating with server...');
-    return performRequest<any>(options).then<AccessToken>(body => {
-        const tok: AccessToken = {
+    return performRequest<any>(options).then<AccessToken>(body =>
+    {
+        var tok: AccessToken = {
             resource: resource,
             credentials: credentials,
             expiration: body.expires_on,
