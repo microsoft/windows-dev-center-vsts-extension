@@ -1,14 +1,12 @@
-﻿/*
+﻿﻿/*
  * A helper to perform various HTTP requests, with some default handling to manage errors.
  * This is mainly a wrapper for the 'request' npm module that uses promises instead of callbacks.
  */
 
-import http = require('http'); // Only used for types
-
-import {v4 as uuidv4} from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import Q = require('q');
-import request = require('request');
 import tl = require('azure-pipelines-task-lib');
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 /** How long to wait between retries (in ms) */
 const RETRY_DELAY = 60000;
@@ -57,10 +55,10 @@ function isExpired(token: AccessToken): boolean
 export class ResponseInformation
 {
     error: any;
-    response: http.IncomingMessage;
+    response: AxiosResponse | undefined;
     body: any;
 
-    constructor(_err: any, _res: http.IncomingMessage, _bod: any)
+    constructor(_err: any, _res: AxiosResponse | undefined, _bod: any)
     {
         this.error = _err;
         this.response = _res;
@@ -83,7 +81,7 @@ export class ResponseInformation
             {
                 bodyToPrint = JSON.stringify(bodyToPrint);
             }
-            var statusCode: string = (this.response != undefined && this.response.statusCode != undefined) ? this.response.statusCode.toString() : 'unknown';
+            var statusCode: string = (this.response != undefined && this.response.status != undefined) ? this.response.status.toString() : 'unknown';
             log = `Status ${statusCode}: ${bodyToPrint}`;
         }
 
@@ -113,13 +111,12 @@ export class ResponseInformation
  * @param stream If specified, pipe this stream into the request.
  */
 export function performRequest<T>(
-    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions,
-    stream?: NodeJS.ReadableStream):
+    options: AxiosRequestConfig):
     Q.Promise<T>
 {
     var deferred = Q.defer<T>();
 
-    if (options.timeout == undefined)
+    if (options.timeout === undefined)
     {
         options.timeout = TIMEOUT;
     }
@@ -138,48 +135,32 @@ export function performRequest<T>(
         options.headers['CorrelationId'] = correlationId;
     }
 
-    var callback = function (error, response, body)
-    {
-        // For convenience, parse the body if it's JSON.
-        if (response != undefined && // response is undefined if a transport-level error occurs
-            response.headers['content-type'] != undefined &&   // content-type is undefined if there is no content
-            response.headers['content-type'].indexOf('application/json') != -1 &&
-            typeof body == 'string') // body might be an object if the options given to request already parsed it for us
-        {
-            body = JSON.parse(body);
-            logErrorsAndWarnings(response, body);
-        }
+    var payload = options.data !== undefined && options.data !== null ? options.data : '';
+    tl.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
 
-        if (error || (response && response.statusCode != undefined && response.statusCode >= 400))
-        {
+    axios(options)
+        .then((response: AxiosResponse<T>) => {
+            logErrorsAndWarnings(response, response.data);
+            deferred.resolve(response.data);
+            tl.debug(`Request completed successfully with correlation id: ${correlationId}`);
+        })
+        .catch((error: AxiosError) => {
+            let response = error.response;
+            let body = response ? response.data : undefined;
             deferred.reject(new ResponseInformation(error, response, body));
-        }
-        else
-        {
-            deferred.resolve(body);
-        }
-        tl.debug(`Finished request with correlation id: ${correlationId}`);
-    }
-
-    if (!stream)
-    {
-        request(options, callback);
-    }
-    else
-    {
-        stream.pipe(request(options, callback));
-    }
+            tl.debug(`Request failed with correlation id: ${correlationId}, error: ${JSON.stringify(error)}`);
+        });
 
     return deferred.promise;
 }
 
 /**
- * Same as @performRequest@, but additionally requires an authentification token.
+ * Same as @performRequest@, but additionally requires an authentication token.
  * @param auth A token used to identify with the resource. If expired, it will be renewed before executing the request.
  */
 export function performAuthenticatedRequest<T>(
     auth: AccessToken,
-    options: (request.UriOptions | request.UrlOptions) & request.CoreOptions):
+    options: AxiosRequestConfig):
     Q.Promise<T>
 {
     // The expiration check is a function that returns a promise
@@ -187,6 +168,7 @@ export function performAuthenticatedRequest<T>(
     {
         if (isExpired(auth))
         {
+            tl.debug(`Access token expired for resource: ${auth.resource}. Will refresh token.`);
             return authenticate(auth.resource, auth.credentials).then(function (newAuth)
             {
                 auth.token = newAuth.token;
@@ -227,17 +209,18 @@ export function performAuthenticatedRequest<T>(
 export function authenticate(resource: string, credentials: Credentials): Q.Promise<AccessToken>
 {
     var endpoint = 'https://login.microsoftonline.com/' + credentials.tenant + '/oauth2/token';
-    var requestParams = {
+    var requestParams = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: credentials.clientId,
         client_secret: credentials.clientSecret,
         resource: resource
-    };
+    });
 
-    var options = {
+    var options: AxiosRequestConfig = {
         url: endpoint,
         method: 'POST',
-        form: requestParams
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        data: requestParams.toString()
     };
 
     console.log('Authenticating with server...');
@@ -297,11 +280,11 @@ export function withRetry<T>(
 export function isRetryableError(err:any, relax:boolean = true): boolean
 {
     // Does this look like a ResponseInformation?
-    if (err != undefined && err.response != undefined && typeof err.response.statusCode == 'number')
+    if (err != undefined && err.response != undefined && typeof err.response.status == 'number')
     {
-        return err.response.statusCode == 429 // 429 code is returned by the API for throttle down. This is retriable
-            || err.response.statusCode == 503
-            || (relax && err.response.statusCode >= 500)
+        return err.response.status == 429 // 429 code is returned by the API for throttle down. This is retriable
+            || err.response.status == 503
+            || (relax && err.response.status >= 500);
     }
 
     // Default to retry if no err information.

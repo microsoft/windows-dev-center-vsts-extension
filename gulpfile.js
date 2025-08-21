@@ -1,12 +1,13 @@
 var exec = require('child_process').exec;
 var fs = require('fs');
 var path = require('path');
-
+var admzip = require('adm-zip');
 var argv = require('yargs').argv;
+var axios = require('axios');
+
 var del = require('del');
+var fs = require('fs-extra');
 var gulp = require('gulp');
-var download = require('gulp-download');
-var decompress = require('gulp-decompress');
 var gulp_exec = require('gulp-exec');
 var gulpif = require('gulp-if');
 var git = require('gulp-git');
@@ -17,7 +18,6 @@ var replace = require('gulp-replace');
 var tsc = require('gulp-typescript');
 var merge = require('merge-stream');
 var spawn = require('child_process').spawn;
-var request = require('request');
 
 const EXTENSION_MANIFEST = 'vss-extension.json';
 const BUILD_DIR = 'build/';
@@ -103,15 +103,44 @@ gulp.task('get_storebroker', function(done) {
     done()
 });
 
+async function downloadZipFile(url, outputPath)
+{
+    writer = fs.createWriteStream(outputPath);
+    var response= await axios.get(url, { responseType: "stream" })
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', reject);
+    });
+}
+
+function unzipFile(zipPath, extractPath) {
+    const zip = new admzip(zipPath);
+    zip.extractAllTo(extractPath, true);
+}
+
+async function getOpensslAndMoveToBuildFolders() {
+    await downloadZipFile('https://vstsagenttools.blob.core.windows.net/tools/openssl/1.0.2/M153/openssl.zip', './openssl.zip')
+    .then(() => {
+        unzipFile('./openssl.zip', './openssl');
+    })
+    .then(() => {
+        console.log('OpenSSL downloaded and extracted.');
+        var files = fs.readdirSync('./openssl');
+        var destinationFolder = path.join(__dirname, 'lib/ps_modules/openssl');
+
+        files.forEach(file => {
+            var oldPath = path.join('./openssl', file);
+            var newFileName = file.replace(' ', '_');
+            var newPath = path.join(destinationFolder, newFileName);
+            fs.copySync(oldPath, newPath, { overwrite: true });
+        });
+    });
+}
+
 gulp.task('get_openssl', function(done) {
-    download('https://vstsagenttools.blob.core.windows.net/tools/openssl/1.0.2/M153/openssl.zip')
-    .pipe(decompress())
-    // Replace any empty space in the file name with underscore because you can't have empty space in any dependency file name in the extension. Otherwise building the extension will fail.
-    .pipe(rename(function(opt) {
-        opt.basename = opt.basename.split(' ').join('_');
-        return opt;
-      }))
-    .pipe(gulp.dest(path.join(__dirname, 'lib/ps_modules/openssl')));
+    getOpensslAndMoveToBuildFolders();
     done();
 });
 
@@ -120,9 +149,16 @@ gulp.task('nuget_download', function(done) {
         done();
     }
 
-    request.get('https://dist.nuget.org/win-x86-commandline/v4.9.0-rc1/nuget.exe')
-        .pipe(fs.createWriteStream('nuget.exe'))
-        .on('close', done);
+    const writer = fs.createWriteStream('nuget.exe');
+    axios({
+        method: 'get',
+        url: 'https://dist.nuget.org/win-x86-commandline/v4.9.0-rc1/nuget.exe',
+        responseType: 'stream'
+    }).then(function (response) {
+        response.data.pipe(writer);
+        writer.on('finish', done);
+        writer.on('error', done);
+    }).catch(done);
 });
 
 gulp.task('nuget_restore', gulp.series('nuget_download', function() {
@@ -406,7 +442,7 @@ gulp.task('clean', function () {
 
 // Remove all tasks and dependencies from the build directory, so that we can start fresh.
 gulp.task('clean_dependencies', function () {
-    return del(['./lib/ps_modules/**/*', './packages/**/*', './nuget.exe']);
+    return del(['./lib/ps_modules/**/*', './packages/**/*', './nuget.exe', './openssl.zip', './openssl/**/*']);
 });
 
 // Create a VSIX package for the extension. --publisher specifies the publisher to use, if different from the manifest.
