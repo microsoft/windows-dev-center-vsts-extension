@@ -138,6 +138,8 @@ export function performRequest<T>(
     var payload = options.data !== undefined && options.data !== null ? options.data : '';
     tl.debug(`${options.method} ${options.url} with ${JSON.stringify(payload).length}-byte payload`);
 
+    tl.debug(`Request details: ${JSON.stringify(options, null, 2)}`);
+
     axios(options)
         .then((response: AxiosResponse<T>) => {
             logErrorsAndWarnings(response, response.data);
@@ -145,10 +147,19 @@ export function performRequest<T>(
             tl.debug(`Request completed successfully with correlation id: ${correlationId}`);
         })
         .catch((error: AxiosError) => {
+            tl.debug(`Request failed with correlation id: ${correlationId}, error: ${JSON.stringify(error)}`);
+
+            if (error.response) {
+                tl.debug(`Response received from server but failed. Full response: ${JSON.stringify(error.response)}`);
+            } else if (error.request) {
+                tl.debug(`No response received. Request details: ${JSON.stringify(error.request)}`);
+            } else {
+                tl.debug(`Error setting up request: ${error.message}`);
+            }
+
             let response = error.response;
             let body = response ? response.data : undefined;
             deferred.reject(new ResponseInformation(error, response, body));
-            tl.debug(`Request failed with correlation id: ${correlationId}, error: ${JSON.stringify(error)}`);
         });
 
     return deferred.promise;
@@ -189,12 +200,12 @@ export function performAuthenticatedRequest<T>(
             if (options.headers === undefined)
             {
                 options.headers = {
-                    'Authorization': 'Bearer ' + auth.token
+                    'Authorization': `Bearer ${auth.token}`
                 }
             }
             else
             {
-                options.headers['Authorization'] = 'Bearer ' + auth.token;
+                options.headers['Authorization'] = `Bearer ${auth.token}`;
             }
 
             return performRequest<T>(options);
