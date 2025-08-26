@@ -150,9 +150,9 @@ export function performRequest<T>(
             tl.debug(`Request failed with correlation id: ${correlationId}, error: ${JSON.stringify(error)}`);
 
             if (error.response) {
-                tl.debug(`Response received from server but failed. Full response: ${JSON.stringify(error.response)}`);
+                tl.debug(`Response received from server but failed. Full response: ${error.response}`);
             } else if (error.request) {
-                tl.debug(`No response received. Request details: ${JSON.stringify(error.request)}`);
+                tl.debug(`No response received. Request details: ${error.request}`);
             } else {
                 tl.debug(`Error setting up request: ${error.message}`);
             }
