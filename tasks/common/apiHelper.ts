@@ -246,7 +246,7 @@ export function pollSubmissionStatus(token: request.AccessToken, resourceLocatio
  * @return A promise for the status of the submission: true for completed, false for not completed yet.
  * The promise will be rejected if an error occurs in the submission.
  */
-function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<boolean>
+export function checkSubmissionStatus(token: request.AccessToken, resourceLocation: string, publishMode: string): Q.Promise<boolean>
 {
     const statusMsg = `Submission status for "${resourceLocation}"`;
     const requestParams = {
@@ -321,11 +321,15 @@ export function createSubmission(token: request.AccessToken, url: string): Q.Pro
     tl.debug('Creating new submission');
     var requestParams = {
         url: url,
-        method: 'POST'
+        method: 'POST',
+        data: null, // explicitly no body
+        headers: {
+            'Content-Type': 'application/json' // clears the default header
+        }
     };
 
-    var putGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
-    return request.withRetry(NUM_RETRIES, putGenerator, err => request.isRetryableError(err, false));
+    var postGenerator = () => request.performAuthenticatedRequest<any>(token, requestParams);
+    return request.withRetry(NUM_RETRIES, postGenerator, err => request.isRetryableError(err, false));
 }
 
 /**
@@ -360,7 +364,11 @@ export function commitSubmission(token: request.AccessToken, url: string): Q.Pro
 
     var requestParams = {
         url: url,
-        method: 'POST'
+        method: 'POST',
+        data: null, // explicitly no body
+        headers: {
+            'Content-Type': 'application/json'
+        }
     };
 
     var postGenerator = () => request.performAuthenticatedRequest<void>(token, requestParams);
