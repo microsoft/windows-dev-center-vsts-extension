@@ -1,3 +1,5 @@
+// Use this script to create access token that can be used by other test files under /tests folder
+
 [CmdletBinding()]
 param()
 Set-StrictMode -Version 2.0
@@ -16,10 +18,12 @@ Import-Module "$PSScriptRoot\..\lib\ps_modules\AdoAzureHelper\AdoAzureHelper.psm
 Initialize-AdoAzureHelper -msalLibraryDir $NugetPath -adoApiLibraryDir $NugetPath -openSSLExeDir $OpenSSLPath
 $resource = "https://manage.devcenter.microsoft.com"
 
+
+// To get a token locally we can create a key vault certificate with subject ID set to CN=f8c7a2d2-b9d1-4c63-988a-6e4cceb58b7e and export it as a PEM file
+// Then replace ServicePrincipalCertificate value with the actual content of the .pem file
 $endpointId = "XXX"
 $endPointObj = @{
     'Auth' = @{
-        'scheme' = 'UsernamePassword'
         'parameters' = @{
             # This is the tenant Id of Microsoft
             'AuthenticationType' = 'SPNCertificate'

@@ -53,7 +53,8 @@ test('checkSubmissionStatus', async () => {
     };
 
     apiHelpers.ROOT = "https://manage.devcenter.microsoft.com/v1.0/my/";
-    var resourceLocation = `applications/9N1XVXWJ30RV/submissions/1152921505699754749`;
+    // Replace <SubmissionId> with the actual submission ID
+    var resourceLocation = `applications/9N1XVXWJ30RV/submissions/<SubmissionId>`;
     const result = await apiHelpers.checkSubmissionStatus(token, resourceLocation, 'Immediate');
     expect(result).toBeDefined();
     console.log ("Run checkSubmissionStatus successfully with result:", result);
@@ -71,7 +72,8 @@ test('deleteSubmission', async () => {
         token: "XXXX"
     };
 
-    var URL = `https://manage.devcenter.microsoft.com/v1.0/my/applications/9N1XVXWJ30RV/submissions/1152921505699754749`;
+    // Replace <SubmissionId> with the actual submission ID
+    var URL = `https://manage.devcenter.microsoft.com/v1.0/my/applications/9N1XVXWJ30RV/submissions/<SubmissionId>`;
     const result = await apiHelpers.deleteSubmission(token, URL);
     expect(result).toBeDefined();
     console.log ("Run deleteSubmission successfully with result:", result);
