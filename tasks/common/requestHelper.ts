@@ -146,7 +146,7 @@ export function performRequest<T>(
         })
         .catch((error: AxiosError) => {
             tl.debug(`Request with correlation id: ${correlationId} failed`);
-            logAxiosErrors(error);
+            logAxiosError(error);
             let response = error.response;
             let body = response ? response.data : undefined;
             deferred.reject(new ResponseInformation(error, response, body));
@@ -317,7 +317,7 @@ function logErrorsAndWarnings(response: any, body: any)
     }
 }
 
-function logAxiosErrors(error: AxiosError): void
+function logAxiosError(error: AxiosError): void
 {
     if (axios.isAxiosError(error)) {
         tl.debug('AxiosError caught');
@@ -340,7 +340,7 @@ function logAxiosErrors(error: AxiosError): void
         }
             // Something went wrong setting up the request
         else {
-            tl.debug(`Error during request setup: ${error.message}`);
+            tl.debug(`Error was caught during the request setup.`);
         }
 
         // Config used for the request
@@ -355,6 +355,6 @@ function logAxiosErrors(error: AxiosError): void
         }
     } else {
         // Non-Axios error
-        tl.debug(`Unexpected error: ${error}`);
+        tl.debug(`Non-Axios error caught: ${error}`);
     }
 }
