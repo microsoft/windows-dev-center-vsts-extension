@@ -145,10 +145,11 @@ export function performRequest<T>(
             tl.debug(`Request completed successfully with correlation id: ${correlationId}`);
         })
         .catch((error: AxiosError) => {
+            tl.debug(`Request with correlation id: ${correlationId} failed`);
+            logAxiosError(error);
             let response = error.response;
             let body = response ? response.data : undefined;
             deferred.reject(new ResponseInformation(error, response, body));
-            tl.debug(`Request failed with correlation id: ${correlationId}, error: ${JSON.stringify(error)}`);
         });
 
     return deferred.promise;
@@ -186,16 +187,10 @@ export function performAuthenticatedRequest<T>(
     return expirationCheck() // Call the expiration check to obtain a promise for it.
         .then<T>(function () // Chain the use of the token to that promise.
         {
-            if (options.headers === undefined)
-            {
-                options.headers = {
-                    'Authorization': 'Bearer ' + auth.token
-                }
+            if (!options.headers) {
+                options.headers = {};
             }
-            else
-            {
-                options.headers['Authorization'] = 'Bearer ' + auth.token;
-            }
+            options.headers['Authorization'] = `Bearer ${auth.token}`;
 
             return performRequest<T>(options);
         });
@@ -319,5 +314,47 @@ function logErrorsAndWarnings(response: any, body: any)
         response.headers['ms-correlationid'] != undefined)
     {
         tl.debug(`CorrelationId: ${response.headers['ms-correlationid']}`);
+    }
+}
+
+function logAxiosError(error: AxiosError): void
+{
+    if (axios.isAxiosError(error)) {
+        tl.debug('AxiosError caught');
+
+        // General error info
+        tl.debug(`Message: ${error.message}`);
+        tl.debug(`Code: ${error.code}`);
+        tl.debug(`Name: ${error.name}`);
+        tl.debug(`Stack: ${error.stack}`);
+
+        // Server responded with a status code
+        if (error.response) {
+            tl.debug(`Server Response Status: ${error.response.status}`);
+            tl.debug(`Server Response Headers: ${JSON.stringify(error.response.headers)}`);
+            tl.debug(`Server Response Data: ${JSON.stringify(error.response.data)}`);
+        }
+        // Request was made but no response received
+        else if (error.request) {
+            tl.debug(`No server response received. Raw request: ${error.request}`);
+        }
+            // Something went wrong setting up the request
+        else {
+            tl.debug(`Error was caught during the request setup.`);
+        }
+
+        // Config used for the request
+        if (error.config) {
+            tl.debug(`Request Config: ${JSON.stringify({
+                method: error.config.method,
+                url: error.config.url,
+                headers: error.config.headers,
+                data: error.config.data,
+                timeout: error.config.timeout
+            })}`);
+        }
+    } else {
+        // Non-Axios error
+        tl.debug(`Non-Axios error caught: ${error}`);
     }
 }
