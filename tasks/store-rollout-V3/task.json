@@ -16,7 +16,7 @@
     "version": {
         "Major": "3",
         "Minor": "0",
-        "Patch": "23"
+        "Patch": "24"
     },
     "minimumAgentVersion": "2.117.0",
     "instanceNameFormat": "Rollout $(appName)",
