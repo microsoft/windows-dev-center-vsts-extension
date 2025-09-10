@@ -168,8 +168,10 @@ gulp.task('nuget_restore', gulp.series('nuget_download', function() {
 }));
 
 gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
-    var copyAzureStorage = gulp.src(['./packages/WindowsAzure.Storage.9.0.0/lib/net45/Microsoft.WindowsAzure.Storage.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyDataMovement = gulp.src(['./packages/Microsoft.Azure.Storage.DataMovement.0.7.1/lib/net45/Microsoft.WindowsAzure.Storage.DataMovement.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyAzureStorageBlob = gulp.src(['./packages/Microsoft.Azure.Storage.Blob.11.2.3/lib/net452/Microsoft.Azure.Storage.Blob.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyAzureStorageFile = gulp.src(['./packages/Microsoft.Azure.Storage.File.11.2.3/lib/net452/Microsoft.Azure.Storage.File.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyAzureStorageCommon = gulp.src(['./packages/Microsoft.Azure.Storage.Common.11.2.3/lib/net452/Microsoft.Azure.Storage.Common.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyAzureStorageDataMovement = gulp.src(['./packages/Microsoft.Azure.Storage.DataMovement.2.0.5/lib/net452/Microsoft.Azure.Storage.DataMovement.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyApplicationsInsight = gulp.src(['./packages/Microsoft.ApplicationInsights.2.0.1/lib/net45/Microsoft.ApplicationInsights.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTracingEventSource = gulp.src(['./packages/Microsoft.Diagnostics.Tracing.EventSource.Redist.1.1.24/lib/net40/Microsoft.Diagnostics.Tracing.EventSource.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyThreadingTasks = gulp.src(['./packages/Microsoft.Bcl.Async.1.0.168/lib/net40/Microsoft.Threading.Tasks.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
@@ -180,7 +182,7 @@ gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
     var copyTfsWebApi = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.WebApi.19.225.1/lib/net472/**/*']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTfsCommonContract = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.19.225.1/lib/net472/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyAspNetWebApi = gulp.src(['./packages/Microsoft.AspNet.WebApi.Client.5.2.7/lib/net45/System.Net.Http.Formatting.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    return merge(copyAzureStorage, copyDataMovement, copyApplicationsInsight, copyTracingEventSource, copyThreadingTasks, copyNewtonsoft, copyVstsClient, copyIdentityClient, copyIdentityAbstraction, copyTfsWebApi, copyTfsCommonContract, copyAspNetWebApi);
+    return merge(copyAzureStorageBlob, copyAzureStorageFile, copyAzureStorageCommon, copyAzureStorageDataMovement, copyApplicationsInsight, copyTracingEventSource, copyThreadingTasks, copyNewtonsoft, copyVstsClient, copyIdentityClient, copyIdentityAbstraction, copyTfsWebApi, copyTfsCommonContract, copyAspNetWebApi);
 }));
 
 /* When compiling, we want to go from the structure on the left to the one on the right.
