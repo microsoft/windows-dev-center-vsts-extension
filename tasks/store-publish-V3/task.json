@@ -4,7 +4,7 @@
     "friendlyName": "TO_BE_SET",
     "description": "TO_BE_SET",
     "author": "Microsoft Corporation",
-    "helpMarkDown": "Visit our GitHub repository for help on usage for [this task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---publish)",
+    "helpMarkDown": "Store Publish and Flight task V3 are supported only on Microsoft owned ADO organizations. Please switch to v0 if you are not running this extension in a non-Microsoft owned ADO organization. Visit our GitHub repository for help on usage for [this task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---publish)",
     "category": "Deploy",
     "visibility": [
         "Build",
@@ -16,7 +16,7 @@
     "version": {
         "Major": "3",
         "Minor": "0",
-        "Patch": "32"
+        "Patch": "33"
     },
     "minimumAgentVersion": "2.117.0",
     "instanceNameFormat": "Publish $(appName)",
@@ -40,7 +40,7 @@
             "label": "Service endpoint",
             "defaultValue": "",
             "required": true,
-            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials"
+            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials. For V3 task the service connection must be of type 'Azure Resource Manager'."
         },
         {
             "name": "appNameType",
