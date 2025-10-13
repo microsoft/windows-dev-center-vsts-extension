@@ -4,7 +4,7 @@
     "friendlyName": "Windows Store - Rollout V3",
     "description": "Update rollout in the Windows Store",
     "author": "Microsoft Corporation",
-    "helpMarkDown": "Visit our GitHub repository for help on usage for the [rollout task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---rollout)",
+    "helpMarkDown": "Store rollout task is supported only on Microsoft owned ADO organization. Visit our GitHub repository for help on usage for the [rollout task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---rollout)",
     "category": "Deploy",
     "visibility": [
         "Build",
@@ -16,7 +16,7 @@
     "version": {
         "Major": "3",
         "Minor": "0",
-        "Patch": "25"
+        "Patch": "26"
     },
     "minimumAgentVersion": "2.117.0",
     "instanceNameFormat": "Rollout $(appName)",
@@ -34,7 +34,7 @@
             "label": "Service endpoint",
             "defaultValue": "",
             "required": true,
-            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials"
+            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials. The service connection must be of type 'Azure Resource Manager'"
         },
         {
             "name": "appNameType",

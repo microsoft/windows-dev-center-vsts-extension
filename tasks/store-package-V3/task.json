@@ -4,7 +4,7 @@
     "friendlyName": "Windows Store - Package V3",
     "description": "Create a Json and Zip file based on Store Broker PDPs and Config file",
     "author": "Microsoft Corporation",
-    "helpMarkDown": "Visit our GitHub repository for help on usage for the [package task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---package)",
+    "helpMarkDown": "Store package task is supported only on Microsoft owned ADO organization. Visit our GitHub repository for help on usage for the [package task](https://github.com/Microsoft/windows-dev-center-vsts-extension/blob/master/docs/usage.md##windows-store---package)",
     "category": "Build",
     "visibility": [
         "Build",
@@ -16,7 +16,7 @@
     "version": {
         "Major": "3",
         "Minor": "0",
-        "Patch": "31"
+        "Patch": "32"
     },
     "minimumAgentVersion": "2.117.0",
     "instanceNameFormat": "Package $(appName)",
@@ -34,7 +34,7 @@
             "label": "Service endpoint",
             "defaultValue": "",
             "required": true,
-            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials"
+            "helpMarkDown": "Windows Partner Center endpoint configured with your credentials. The service connection must be of type 'Azure Resource Manager'"
         },
         {
             "name": "sbConfigPath",
