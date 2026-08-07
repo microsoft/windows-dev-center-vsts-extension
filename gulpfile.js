@@ -146,7 +146,26 @@ gulp.task('get_openssl', function(done) {
 
 gulp.task('nuget_download', function(done) {
     if (fs.existsSync('nuget.exe')) {
-        done();
+        return done();
+    }
+
+    // 1ES Network Isolation (CFS): prefer a nuget.exe already on PATH (provisioned by the
+    // NuGetToolInstaller pipeline task) so network-isolated builds do not reach the public
+    // dist.nuget.org CDN. Fall back to the public download only for local dev where the
+    // tool is not present.
+    try {
+        var located = require('child_process')
+            .execSync('where nuget.exe', { stdio: ['ignore', 'pipe', 'ignore'] })
+            .toString()
+            .split(/\r?\n/)
+            .map(function (l) { return l.trim(); })
+            .filter(Boolean);
+        if (located.length && fs.existsSync(located[0])) {
+            fs.copyFileSync(located[0], 'nuget.exe');
+            return done();
+        }
+    } catch (e) {
+        // nuget.exe not found on PATH; fall through to the public download for local dev.
     }
 
     const writer = fs.createWriteStream('nuget.exe');

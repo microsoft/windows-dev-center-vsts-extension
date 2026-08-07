@@ -14,6 +14,14 @@ extends:
   template: /v1/extends/AzureDevOps/VstsExtensionRelease.yml@MROPT
   parameters:
     isProdEnabled: ${{ parameters.isProdEnabled }}
+    # 1ES Network Isolation (CFS): enforce the CFS policies so the release build is
+    # validated against the CFS-backed feeds and no public package feeds are contacted.
+    # CFSClean covers the public npm registry; CFSClean2 covers the public PowerShell
+    # Gallery; CFSClean3 covers the remaining public package sources. DefaultDeny is
+    # applied by the pool, so Permissive is intentionally omitted (it is incompatible
+    # with DefaultDeny and would be ignored).
+    settings:
+      networkIsolationPolicy: CFSClean,CFSClean2,CFSClean3
     pipelineInput:
       input: pipelineArtifact
       pipeline: WindowsDevCenterVstsExtension
@@ -23,3 +31,10 @@ extends:
     stagingVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-dev-*.vsix
     productionVsixFile: $(Pipeline.Workspace)/drop/ms-rdx-mro.windows-store-publish-2*.vsix
     releaseBranch: refs/heads/master
+    # 1ES Network Isolation (CFS): the release job installs tfx globally via TfxInstaller
+    # (npm install -g), which ignores the repo .npmrc. Authenticate/redirect npm to the
+    # CFS-backed CLE_PublicPackages feed before that runs. Reuses the MRO step template.
+    preDeploymentSteps:
+    - template: /v1/steps/Feed/ConfigureNpmFeed.yml@MROPT
+      parameters:
+        feedRegistry: https://pkgs.dev.azure.com/Office/CLE/_packaging/CLE_PublicPackages/npm/registry/
