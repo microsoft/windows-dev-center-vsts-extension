@@ -81,10 +81,14 @@ extends:
           inputs:
             gulpFile: gulpfile.js
             arguments: '--dev'
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - task: gulp@0
           inputs:
             gulpFile: gulpfile.js
             arguments: '--public'
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - task: CopyFiles@2
           inputs:
             SourceFolder: build/extension

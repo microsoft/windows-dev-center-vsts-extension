@@ -18,6 +18,7 @@ var replace = require('gulp-replace');
 var tsc = require('gulp-typescript');
 var merge = require('merge-stream');
 var spawn = require('child_process').spawn;
+var spawnSync = require('child_process').spawnSync;
 
 const EXTENSION_MANIFEST = 'vss-extension.json';
 const BUILD_DIR = 'build/';
@@ -50,20 +51,81 @@ function toOverrideString(object) {
  "Internal" tasks below.
  There should be no need to call these tasks directly.
 ***** */
+
+// 1ES Network Isolation (CFS): restore PowerShell modules strictly from the CFS-backed
+// CLE_PublicPackages Azure Artifacts feed instead of the public PowerShell Gallery. The
+// feed is registered as a PSRepository and Save-Module targets it explicitly. If the feed
+// restore fails (e.g. the module is not hosted on the feed, or no feed credentials are
+// available for a local dev build), the restore falls back to the public PowerShell
+// Gallery so builds outside the network-isolated pipeline still work.
+//
+// The token differs by context but is always fresh:
+//  - In CI (TF_BUILD=True): the build service token passed in via the SYSTEM_ACCESSTOKEN
+//    env var (mapped onto the gulp task env in the pipeline template).
+//  - On a local dev box: a fresh Microsoft Entra token minted via the Azure CLI.
+const CLE_ADO_RESOURCE_ID = '499b84ac-1321-427f-aa17-267ca6975798';
+const CLE_PSFEED_SOURCE_DEFAULT = 'https://pkgs.dev.azure.com/Office/CLE/_packaging/CLE_PublicPackages/nuget/v2';
+
+function buildSaveModuleWithFallbackCommand(moduleName, moduleVersion, modulePath) {
+    return "" +
+        "$ErrorActionPreference = 'Stop';" +
+        "$moduleName = '" + moduleName + "'; $moduleVersion = '" + moduleVersion + "'; $modulePath = '" + modulePath + "';" +
+        // Gulp spawns this child PowerShell with an inherited env whose PSModulePath may omit
+        // the machine module dirs, breaking autoload of PowerShellGet / PackageManagement.
+        "$env:PSModulePath = [System.Environment]::GetEnvironmentVariable('PSModulePath','Machine') + [System.IO.Path]::PathSeparator + $env:PSModulePath;" +
+        "$restoredFromFeed = $false;" +
+        "try {" +
+            "$feedSource = if ($env:CLE_PSFEED_SOURCE) { $env:CLE_PSFEED_SOURCE } else { '" + CLE_PSFEED_SOURCE_DEFAULT + "' };" +
+            "if ($env:TF_BUILD -eq 'True') {" +
+                "$feedToken = $env:SYSTEM_ACCESSTOKEN;" +
+                "if (-not $feedToken) { throw 'SYSTEM_ACCESSTOKEN is required in CI to restore from the CFS-backed CLE_PublicPackages feed (pass it via the gulp task env).'; }" +
+            "} else {" +
+                "if (-not (Get-Command az -ErrorAction SilentlyContinue)) { throw 'Azure CLI (az) is required locally to authenticate to the CLE_PublicPackages feed. Install it and run az login.'; }" +
+                "$feedToken = (& az account get-access-token --resource " + CLE_ADO_RESOURCE_ID + " --query accessToken -o tsv --only-show-errors);" +
+                "if (-not $feedToken) { throw 'Failed to obtain an Azure DevOps token via Azure CLI. Run az login and retry.'; }" +
+                "$feedToken = $feedToken.Trim();" +
+            "}" +
+            // Build the credential via NetworkCredential to avoid depending on
+            // Microsoft.PowerShell.Security (ConvertTo-SecureString) autoloading.
+            "$secure = [System.Net.NetworkCredential]::new('cle', $feedToken).SecurePassword;" +
+            "$cred = New-Object System.Management.Automation.PSCredential('cle', $secure);" +
+            "if (-not (Get-PSRepository -Name 'CLEFeed' -ErrorAction SilentlyContinue)) {" +
+                "Register-PSRepository -Name 'CLEFeed' -SourceLocation $feedSource -InstallationPolicy Trusted -Credential $cred;" +
+            "}" +
+            "Save-Module -Name $moduleName -RequiredVersion $moduleVersion -Path $modulePath -Force -Repository 'CLEFeed' -Credential $cred;" +
+            "$restoredFromFeed = $true;" +
+            "Write-Host ('{0} {1} restored from the CFS-backed CLE_PublicPackages feed.' -f $moduleName, $moduleVersion);" +
+        "} catch {" +
+            // Emit via Write-Host (stdout) rather than Write-Warning (stderr) so the fallback
+            // path is not treated as a hard task failure.
+            "Write-Host ('WARNING: Feed restore of {0} failed: {1}. Falling back to the public PowerShell Gallery.' -f $moduleName, $_.Exception.Message);" +
+        "}" +
+        "if (-not $restoredFromFeed) {" +
+            "Save-Module -Name $moduleName -RequiredVersion $moduleVersion -Path $modulePath -Force -Repository 'PSGallery';" +
+            "Write-Host ('{0} {1} restored from the public PowerShell Gallery (fallback).' -f $moduleName, $moduleVersion);" +
+        "}";
+}
+
+function saveModuleWithFeedFallback(moduleName, moduleVersion, modulePath, gulpCallBack) {
+    var command = buildSaveModuleWithFallbackCommand(moduleName, moduleVersion, modulePath);
+    var result = spawnSync("powershell.exe", ["-NoProfile", "-Command", command], {
+        cwd: process.cwd(),
+        env: process.env,
+        encoding: 'utf-8'
+    });
+
+    if (result.stdout) { console.log(result.stdout); }
+    if (result.stderr) { console.log(result.stderr); }
+
+    if (result.status !== 0) {
+        throw new Error(moduleName + " restore failed with exit code " + result.status);
+    }
+
+    gulpCallBack();
+}
+
 gulp.task('get_vsts_task_sdk', function(gulpCallBack) {
-    child = spawn("powershell.exe", ["Save-Module -Name VstsTaskSdk -Path ./lib/ps_modules -RequiredVersion 0.21.0"]);
-
-    child.stdout.on("data",function(data){
-        console.log(data.toString());
-    });
-
-    child.stderr.on("data",function(data){
-        throw(data.toString());
-    });
-
-    child.on("exit", function() {
-        gulpCallBack();
-    });
+    saveModuleWithFeedFallback('VstsTaskSdk', '0.21.0', './lib/ps_modules', gulpCallBack);
 });
 
 gulp.task('move_vsts_task_sdk', gulp.series('get_vsts_task_sdk', function() {
@@ -73,19 +135,7 @@ gulp.task('move_vsts_task_sdk', gulp.series('get_vsts_task_sdk', function() {
 }));
 
 gulp.task('get_ado_azurehelper_sdk', function(gulpCallBack) {
-    child = spawn("powershell.exe", ["Save-Module -Name AdoAzureHelper -Path ./lib/ps_modules -RequiredVersion 1.0.12"]);
-
-    child.stdout.on("data",function(data){
-        console.log(data.toString());
-    });
-
-    child.stderr.on("data",function(data){
-        throw(data.toString());
-    });
-
-    child.on("exit", function() {
-        gulpCallBack();
-    });
+    saveModuleWithFeedFallback('AdoAzureHelper', '1.0.12', './lib/ps_modules', gulpCallBack);
 });
 
 gulp.task('move_ado_azurehelper_sdk', gulp.series('get_ado_azurehelper_sdk', function() {
