@@ -21,7 +21,7 @@ extends:
     # applied by the pool, so Permissive is intentionally omitted (it is incompatible
     # with DefaultDeny and would be ignored).
     settings:
-      networkIsolationPolicy: CFSClean,CFSClean2,CFSClean3
+      networkIsolationPolicy: Good,AzureStorage,CFSClean,CFSClean2,CFSClean3
     pipelineInput:
       input: pipelineArtifact
       pipeline: WindowsDevCenterVstsExtension
