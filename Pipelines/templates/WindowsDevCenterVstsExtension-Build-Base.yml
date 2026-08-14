@@ -42,6 +42,14 @@ extends:
         environmentsShelljs: false
         environmentsMeteor: false
         environmentsMongo: false
+    # 1ES Network Isolation (CFS): actively enforce the CFS policies so the build is
+    # validated against the CFS-backed feeds and no public package feeds are contacted.
+    # CFSClean covers the public npm registry; CFSClean2 covers the public PowerShell
+    # Gallery; CFSClean3 covers the remaining public package sources. DefaultDeny is
+    # applied by the pool, so Permissive is intentionally omitted (it is incompatible
+    # with DefaultDeny and would be ignored).
+    settings:
+      networkIsolationPolicy: CFSClean,CFSClean2,CFSClean3
     stages:
     - stage:
       jobs:
@@ -52,6 +60,18 @@ extends:
             targetPath: $(Build.ArtifactStagingDirectory)
             artifactName: drop
         steps:
+        # 1ES Network Isolation (CFS): authenticate npm to the CFS-backed CLE_PublicPackages
+        # feed and redirect npm's global config there, so the global tfx-cli install (which
+        # ignores the repo .npmrc) and the project restore both resolve through the internal
+        # feed instead of the public registry. Reuses the MRO step template.
+        - template: /v1/steps/Feed/ConfigureNpmFeed.yml@MROPT
+          parameters:
+            feedRegistry: https://pkgs.dev.azure.com/Office/CLE/_packaging/CLE_PublicPackages/npm/registry/
+        # Provision nuget.exe from the internal tool source (the gulp nuget_download task
+        # picks it up from PATH instead of downloading from public dist.nuget.org) and
+        # authenticate NuGet restore against the CLE_PublicPackages feed in NuGet.config.
+        - task: NuGetToolInstaller@1
+        - task: NuGetAuthenticate@1
         - script: npm install -g tfx-cli
         - task: Npm@1
           inputs:
@@ -61,10 +81,14 @@ extends:
           inputs:
             gulpFile: gulpfile.js
             arguments: '--dev'
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - task: gulp@0
           inputs:
             gulpFile: gulpfile.js
             arguments: '--public'
+          env:
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         - task: CopyFiles@2
           inputs:
             SourceFolder: build/extension
