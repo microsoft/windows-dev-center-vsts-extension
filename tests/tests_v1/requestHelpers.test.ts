@@ -1,4 +1,21 @@
 import requestHelpers = require('../../tasks/common/requestHelper');
+import { AxiosError } from 'axios';
+
+// ResponseInformation must never print credentials from the failed request
+test('ResponseInformation.toString does not leak secrets', () => {
+    const config: any = {
+        method: 'post',
+        url: 'https://login.microsoftonline.com/tenant/oauth2/token',
+        headers: { Authorization: 'Bearer SECRET_TOKEN' },
+        data: 'client_secret=SECRET_CLIENT'
+    };
+    const error = new AxiosError('Request failed with status code 503', 'ERR_BAD_RESPONSE', config);
+    const log = new requestHelpers.ResponseInformation(error, undefined, undefined).toString();
+
+    expect(log).toContain('Request failed with status code 503');
+    expect(log).not.toContain('SECRET_TOKEN');
+    expect(log).not.toContain('SECRET_CLIENT');
+});
 
 // Test function authenticate
 test('authenticate', async () => {
