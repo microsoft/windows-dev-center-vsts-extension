@@ -5,7 +5,7 @@
 .DESCRIPTION
     Under 1ES Network Isolation the public npm registry (registry.npmjs.org) is blocked,
     and the checked-in repo .npmrc points npm at the internal CLE_PublicPackages feed
-    (https://office.pkgs.visualstudio.com/CLE/_packaging/CLE_PublicPackages/npm/registry/). That feed
+    (https://pkgs.dev.azure.com/Office/CLE/_packaging/CLE_PublicPackages/npm/registry/). That feed
     requires authentication, which CI provides via the npmAuthenticate@0 task. On a local
     dev box there is no such task, so `npm install` fails with an E401.
 
@@ -13,11 +13,6 @@
     DevOps resource using the Azure CLI - the same corporate identity your Azure DevOps
     MCP servers and `az` use - and writes it as an `_authToken` entry into your
     user-level %USERPROFILE%\.npmrc. It never modifies the repo-tracked .npmrc.
-
-    Note: the RoqCdn gulp/extension build authenticates to the feed's PowerShell
-    repository separately by minting its own fresh token via the Azure CLI at build time
-    (it does not use SYSTEM_ACCESSTOKEN locally), so this script only handles npm auth.
-    You still need to be signed in with `az login`.
 
     The token is short-lived (typically ~1 hour). Re-run this script whenever npm starts
     returning 401s again.
@@ -34,7 +29,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$FeedRegistry = 'https://office.pkgs.visualstudio.com/CLE/_packaging/CLE_PublicPackages/npm/registry/',
+    [string]$FeedRegistry = 'https://pkgs.dev.azure.com/Office/CLE/_packaging/CLE_PublicPackages/npm/registry/',
     [string]$Tenant
 )
 
