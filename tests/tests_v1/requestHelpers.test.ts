@@ -17,6 +17,14 @@ test('ResponseInformation.toString does not leak secrets', () => {
     expect(log).not.toContain('SECRET_CLIENT');
 });
 
+test('ResponseInformation.toString formats non-Axios errors without undefined', () => {
+    const stringLog = new requestHelpers.ResponseInformation('boom', undefined, undefined).toString();
+    expect(stringLog).toBe('Error: boom');
+
+    const typeErrorLog = new requestHelpers.ResponseInformation(new TypeError('x is not a function'), undefined, undefined).toString();
+    expect(typeErrorLog).toBe('TypeError: x is not a function');
+});
+
 // Test function authenticate
 test('authenticate', async () => {
     const cred: requestHelpers.Credentials = {

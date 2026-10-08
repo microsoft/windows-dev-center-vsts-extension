@@ -73,8 +73,12 @@ export class ResponseInformation
         if (this.error != undefined)
         {
             // Never serialize the whole error: AxiosError includes the request config (auth headers, body).
-            var status = (this.response != undefined && this.response.status != undefined) ? this.response.status : 'none';
-            log = `Error ${this.error.name} (${this.error.code}): ${this.error.message}. Status ${status}`;
+            // Error may not be an AxiosError (e.g. a plain Error or a string), so omit any missing parts.
+            var name = this.error.name ?? 'Error';
+            var code = this.error.code ? ` (${this.error.code})` : '';
+            var message = this.error.message ?? String(this.error);
+            var status = this.response?.status ? `. Status ${this.response.status}` : '';
+            log = `${name}${code}: ${message}${status}`;
         }
         else
         {
