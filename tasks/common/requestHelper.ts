@@ -72,7 +72,13 @@ export class ResponseInformation
 
         if (this.error != undefined)
         {
-            log = `Error ${JSON.stringify(this.error)}`;
+            // Never serialize the whole error: AxiosError includes the request config (auth headers, body).
+            // Error may not be an AxiosError (e.g. a plain Error or a string), so omit any missing parts.
+            var name = this.error.name ?? 'Error';
+            var code = this.error.code ? ` (${this.error.code})` : '';
+            var message = this.error.message ?? String(this.error);
+            var status = this.response?.status ? `. Status ${this.response.status}` : '';
+            log = `${name}${code}: ${message}${status}`;
         }
         else
         {
@@ -228,6 +234,7 @@ export function authenticate(resource: string, credentials: Credentials): Q.Prom
             token: body.access_token
         };
 
+        tl.setSecret(tok.token);
         return tok;
     });
 }
@@ -348,8 +355,7 @@ function logAxiosError(error: AxiosError): void
             tl.debug(`Request Config: ${JSON.stringify({
                 method: error.config.method,
                 url: error.config.url,
-                headers: error.config.headers,
-                data: error.config.data,
+                headers: { ...error.config.headers, Authorization: error.config.headers?.Authorization ? '***' : undefined },
                 timeout: error.config.timeout
             })}`);
         }
