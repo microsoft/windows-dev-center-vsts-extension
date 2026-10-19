@@ -198,6 +198,14 @@
         "Node16": {
             "target": "local/publishUi.js",
             "argumentFormat": ""
+        },
+        "Node20_1": {
+            "target": "local/publishUi.js",
+            "argumentFormat": ""
+        },
+        "Node24": {
+            "target": "local/publishUi.js",
+            "argumentFormat": ""
         }
     }
 }
