@@ -41,6 +41,7 @@
   },
   "scripts": {
     "test": "jest",
+    "test:manifest": "jest tests/tests_v1/taskManifest.test.ts",
     "npmCredentialRefresh": "artifacts-npm-credprovider"
   }
 }
