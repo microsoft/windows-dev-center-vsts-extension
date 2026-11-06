@@ -11,7 +11,7 @@
   "dependencies": {
     "@azure/storage-blob": "^12.28.0",
     "adm-zip": "^0.6.1",
-    "axios": "^1.12.0",
+    "axios": "^1.21.0",
     "azure-pipelines-task-lib": "^5.283.0",
     "glob": "^7.0.3",
     "gulp-git": "^2.11.0",
