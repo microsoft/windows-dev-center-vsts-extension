@@ -150,3 +150,28 @@ function Get-FlightIdFromFlightName
 
     return $flightId
 }
+
+function Register-BundledAssemblyResolver([string] $libraryDir)
+{
+    # Windows PowerShell 5.1 has no binding redirects, and MSAL's dependencies reference
+    # different versions of System.Memory and Unsafe. Load the copy shipped with the task instead.
+    # The handler is C# because .NET can call it on threads where PowerShell script cannot run.
+    if (-not ('BundledAssemblyResolver' -as [type]))
+    {
+        Add-Type -TypeDefinition @"
+using System; using System.IO; using System.Reflection;
+public static class BundledAssemblyResolver {
+    static string _dir;
+    public static void Register(string dir) {
+        if (_dir != null) return;
+        _dir = dir;
+        AppDomain.CurrentDomain.AssemblyResolve += (s, e) => {
+            string path = Path.Combine(_dir, new AssemblyName(e.Name).Name + ".dll");
+            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+        };
+    }
+}
+"@
+    }
+    [BundledAssemblyResolver]::Register($libraryDir)
+}

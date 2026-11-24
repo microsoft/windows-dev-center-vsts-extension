@@ -246,12 +246,20 @@ gulp.task('copy_nuget_dlls', gulp.series('nuget_restore', function() {
     var copyThreadingTasks = gulp.src(['./packages/Microsoft.Bcl.Async.1.0.168/lib/net40/Microsoft.Threading.Tasks.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyNewtonsoft = gulp.src(['./packages/Newtonsoft.Json.13.0.3/lib/net45/Newtonsoft.json.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyVstsClient = gulp.src(['./packages/Microsoft.VisualStudio.Services.Client.19.225.1/lib/net472/**/*']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyIdentityClient = gulp.src(['./packages/Microsoft.Identity.Client.4.74.0/lib/net462/Microsoft.Identity.Client.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    var copyIdentityAbstraction = gulp.src(['./packages/Microsoft.IdentityModel.Abstractions.6.35.0/lib/net45/Microsoft.IdentityModel.Abstractions.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyIdentityClient = gulp.src(['./packages/Microsoft.Identity.Client.4.92.0/lib/net462/Microsoft.Identity.Client.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyIdentityAbstraction = gulp.src(['./packages/Microsoft.IdentityModel.Abstractions.8.14.0/lib/net462/Microsoft.IdentityModel.Abstractions.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyTextJson = gulp.src(['./packages/System.Text.Json.6.0.10/lib/net461/System.Text.Json.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyTextEncodingsWeb = gulp.src(['./packages/System.Text.Encodings.Web.6.0.0/lib/net461/System.Text.Encodings.Web.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyMemory = gulp.src(['./packages/System.Memory.4.5.5/lib/net461/System.Memory.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyBuffers = gulp.src(['./packages/System.Buffers.4.5.1/lib/net461/System.Buffers.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyNumericsVectors = gulp.src(['./packages/System.Numerics.Vectors.4.5.0/lib/net46/System.Numerics.Vectors.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyCompilerServicesUnsafe = gulp.src(['./packages/System.Runtime.CompilerServices.Unsafe.6.0.0/lib/net461/System.Runtime.CompilerServices.Unsafe.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyThreadingTasksExtensions = gulp.src(['./packages/System.Threading.Tasks.Extensions.4.5.4/lib/net461/System.Threading.Tasks.Extensions.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
+    var copyBclAsyncInterfaces = gulp.src(['./packages/Microsoft.Bcl.AsyncInterfaces.6.0.0/lib/net461/Microsoft.Bcl.AsyncInterfaces.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTfsWebApi = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.WebApi.19.225.1/lib/net472/**/*']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyTfsCommonContract = gulp.src(['./packages/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.19.225.1/lib/net472/Microsoft.TeamFoundation.DistributedTask.Common.Contracts.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
     var copyAspNetWebApi = gulp.src(['./packages/Microsoft.AspNet.WebApi.Client.5.2.7/lib/net45/System.Net.Http.Formatting.dll']).pipe(gulp.dest('./lib/ps_modules/NugetPackages'));
-    return merge(copyAzureStorageBlob, copyAzureStorageFile, copyAzureStorageCommon, copyAzureStorageDataMovement, copyApplicationsInsight, copyTracingEventSource, copyThreadingTasks, copyNewtonsoft, copyVstsClient, copyIdentityClient, copyIdentityAbstraction, copyTfsWebApi, copyTfsCommonContract, copyAspNetWebApi);
+    return merge(copyAzureStorageBlob, copyAzureStorageFile, copyAzureStorageCommon, copyAzureStorageDataMovement, copyApplicationsInsight, copyTracingEventSource, copyThreadingTasks, copyNewtonsoft, copyVstsClient, copyIdentityClient, copyIdentityAbstraction, copyTextJson, copyTextEncodingsWeb, copyMemory, copyBuffers, copyNumericsVectors, copyCompilerServicesUnsafe, copyThreadingTasksExtensions, copyBclAsyncInterfaces, copyTfsWebApi, copyTfsCommonContract, copyAspNetWebApi);
 }));
 
 /* When compiling, we want to go from the structure on the left to the one on the right.

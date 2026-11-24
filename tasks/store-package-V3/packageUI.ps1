@@ -46,6 +46,7 @@ try
     Set-StoreBrokerSettings -LogPath $logPath -NugetPath $NugetPath -DisableTelemetry $disableTelemetry -Verbose:$useVerbose
 
     # Getting AAD accessToken that would be later used by all the StoreBroker commands to access Partner Center APIs.
+    Register-BundledAssemblyResolver $NugetPath
     Initialize-AdoAzureHelper -msalLibraryDir $NugetPath -adoApiLibraryDir $NugetPath -openSSLExeDir $OpenSSLPath
     $resource = "https://api.partner.microsoft.com"
 
